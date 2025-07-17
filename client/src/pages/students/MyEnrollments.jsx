@@ -29,9 +29,11 @@ const MyEnrollments = () => {
 
   return (
     <>
-    <div className='md:px-36 px-8 pt-10'></div>
-    <div className="max-w-6xl mx-auto p-6">
-      <h1 className='text-2xl font-semibold'>My Enrollments</h1>
+    <div className='md:px-36 px-8 pt-20 pb-8 bg-gradient-to-b from-cyan-100/70 to-white'>
+      <h1 className='text-4xl font-semibold text-gray-800'>My Enrollments</h1>
+      <p className='text-gray-500 mt-2'>Track your learning progress and continue your courses</p>
+    </div>
+    <div className="max-w-6xl mx-auto p-6 -mt-4">
       
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <table className="md:table-auto table-fixed w-full overflow-hidden border-amber-50 mt-10">

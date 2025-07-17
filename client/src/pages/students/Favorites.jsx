@@ -8,12 +8,16 @@ const Favorites = () => {
   const favoriteList = allCourses.filter(course => favoriteCourses.includes(course._id));
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-10 px-4">
-        <div className="mb-8">
+    <>
+      <div className="bg-gradient-to-b from-cyan-100/70 to-white py-12 px-4">
+        <div className="max-w-7xl mx-auto">
           <h1 className="text-4xl font-bold mb-4 text-gray-800">My Favorite Courses</h1>
           <p className="text-gray-600">Courses you've marked as favorites</p>
         </div>
+      </div>
+      
+      <div className="min-h-screen bg-gray-50 -mt-4">
+        <div className="max-w-7xl mx-auto py-10 px-4">
         
         {favoriteList.length === 0 ? (
           <div className="text-center py-16">
@@ -45,6 +49,7 @@ const Favorites = () => {
         )}
       </div>
     </div>
+    </>
   );
 };
 
