@@ -51,10 +51,9 @@ const {allCourses,calculateChapterTime,
 
   return courseData ? (
     <>
-    <div className="flex md:flex-row flex-col-reverse gap-8 md:gap-12 relative items-start justify-center md:px-36 px-8 md:pt-20 pt-10 text-left">
-        <div className="absolute top-0 left-0 w-full h-section-height -z-1 bg-gradient-to-b from-cyan-100/70"></div>
+    <div className="flex md:flex-row flex-col-reverse gap-8 md:gap-12 relative items-start justify-center md:px-36 px-8 md:pt-20 pt-10 text-left bg-gradient-to-b from-cyan-100/40 to-white pb-12">
         {/*left*/}
-        <div className="flex-1 max-w-2xl z-10 text-black">
+        <div className="flex-1 max-w-2xl text-black">
           <div className="flex items-start justify-between gap-3 mb-4">
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-800 flex-1">{courseData.courseTitle}</h1>
             <button
