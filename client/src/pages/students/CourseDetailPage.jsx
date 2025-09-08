@@ -1,6 +1,6 @@
 import { AppContext } from '../../context/AppContext';
 import { useParams } from 'react-router-dom';
-import{ useEffect, useState,useContext, useCallback } from 'react';
+import{ useEffect, useState, useContext } from 'react';
 import Loading from '../../components/students/Loading';
 import { assets } from '../../assets/assets';
 import humanizeDuration from 'humanize-duration'
@@ -26,20 +26,17 @@ const {allCourses,calculateChapterTime,
         isCourseFavorite,
         addToViewHistory} = useContext(AppContext);
   
-  const fetchCourseData = useCallback(async () => {
-    const findCourse = allCourses.find(course => course._id === id)
-    setCourseData(findCourse);
-  }, [allCourses, id])
-  
   useEffect(() => {
-    fetchCourseData();
+    const findCourse = allCourses.find(course => course._id === id);
+    setCourseData(findCourse);
     if (id) {
       addToViewHistory(id);
     }
-  }, [fetchCourseData, id, addToViewHistory]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, allCourses]);
 
   useEffect(() => {
-  
+    console.log('Rating update trigger changed:', ratingUpdateTrigger);
   }, [ratingUpdateTrigger]);
    const toggleSection = (index) => {
     setOpenSections((prev) => ({
@@ -48,6 +45,12 @@ const {allCourses,calculateChapterTime,
     }));
   };
 
+  useEffect(() => {
+    console.log('CourseDetailPage mounted');
+    return () => {
+      console.log('CourseDetailPage unmounted');
+    };
+  }, []);
 
   return courseData ? (
     <>
