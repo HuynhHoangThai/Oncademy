@@ -1,7 +1,7 @@
 import {createContext,useEffect,useState} from "react";
 import { dummyCourses } from "../assets/assets";
 import humanizeDuration from "humanize-duration";
-import { useUser } from '@clerk/clerk-react';
+import { useAuth, useUser } from '@clerk/clerk-react';
 
 const AppContext = createContext()
 
@@ -11,6 +11,8 @@ const AppProvider = (props) => {
     const [allCourses, setAllCourses] = useState([])
     const [isEducator, setIsEducator] = useState(true)
     const [enrolledCourses, setEnrolledCourses] = useState([])
+    const {getToken}=useAuth();
+    
     
     // Use user-specific localStorage key
     const getUserRatingsKey = () => user ? `courseRatings_${user.id}` : 'courseRatings_guest';
@@ -114,7 +116,13 @@ const AppProvider = (props) => {
         fecthAllCourses()
         fetchUserEnrolledCourses()
     },[])
-    
+    const logToken=async()=>{
+        console.log(await getToken());
+    }
+    useEffect(() => {
+        if(user) {
+        logToken()};
+    }, [user]);
     // Load ratings when user is ready or changes
     // Load all ratings (all users) from localStorage
     useEffect(() => {
