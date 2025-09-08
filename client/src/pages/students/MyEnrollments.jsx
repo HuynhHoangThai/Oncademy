@@ -9,7 +9,7 @@ import Footer from '../../components/students/Footer';
 const MyEnrollments = () => {
   const { enrolledCourses, calculateCourseDuration} = useContext(AppContext);
   const navigate = useNavigate();
-  const [progressArray,setProgressArray] = useState([
+  const [progressArray] = useState([
     {lectureCompleted: 4, totalLectures: 4},
     {lectureCompleted: 6, totalLectures: 10},
     {lectureCompleted: 2, totalLectures: 10},

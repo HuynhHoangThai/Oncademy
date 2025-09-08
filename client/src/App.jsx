@@ -13,9 +13,10 @@ import ViewHistory from './pages/students/ViewHistory'
 import Educator from './pages/educator/Educator'
 import Dashboard from './pages/educator/Dashboard'
 import AddCourse from './pages/educator/AddCourse'
-import Mycourse from './pages/educator/Mycourse'
+
 import StudentsEnrolled from './pages/educator/StudentsEnrolled'
 import Navbar from './components/students/NavBar'
+import MyCourses from './pages/educator/MyCourses'
 
 // Components
 import Loading from './components/students/Loading'
@@ -36,11 +37,13 @@ const App = () => {
         <Route path='/player/:courseId' element={<Player/>} />
         <Route path='/loading/:path' element={<Loading/>} />
         <Route path='/educator' element={<Educator/>}>
-          <Route path='/educator' element={<Dashboard/>} />
+          <Route index element={<Dashboard/>} />
           <Route path='add-course' element={<AddCourse/>} />
-          <Route path='my-courses' element={<Mycourse/>} />
+          <Route path='my-courses' element={<MyCourses/>} />
           <Route path='students-enrolled' element={<StudentsEnrolled/>} />
           <Route path='students-enrolled/:courseId' element={<StudentsEnrolled/>} />
+          <Route path='student-enrolled' element={<StudentsEnrolled/>} />
+          <Route path='student-enrolled/:courseId' element={<StudentsEnrolled/>} />
         </Route>
       </Routes>    
     </div>
