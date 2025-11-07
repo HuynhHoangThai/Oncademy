@@ -1,19 +1,39 @@
 
 import { useContext, useEffect, useState } from 'react'
 import { AppContext } from '../../context/AppContext'
-import { dummyDashboardData } from '../../assets/assets';
+import {assets, dummyDashboardData } from '../../assets/assets';
 import Loading from '../../components/students/Loading';
-import { assets } from '../../assets/assets';
+import { toast } from 'react-toastify';
+
 
 const Dashboard = () => {
-  const { currency } = useContext(AppContext);
+
+  const { currency, backendUrl, getToken, isEducator } = useContext(AppContext);
   const [dashboardData, setDashboardData] = useState(null)
+
   const fetchDashboardData = async () => {
-    setDashboardData(dummyDashboardData)
+    try {
+      const token = await getToken();
+      const {data} = await axios.get(backendUrl + '/api/educator/dashboard',
+        {headers: {Authorization: `Bearer ${token}`}})
+
+      if(data.success) {
+        setDashboardData(data.dashboardData);
+      } else {
+        toast.error(data.message);
+      }
+
+    } catch (error) {
+      toast.error(error.message);
+    }
   }
+
   useEffect(() => {
-    fetchDashboardData()
+    if(isEducator){
+      fetchDashboardData();
+    }
   }, [])
+
   return dashboardData ? (
     <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 to-white flex flex-col items-center py-10 px-2">
       <div className="w-full max-w-5xl flex flex-col gap-10">

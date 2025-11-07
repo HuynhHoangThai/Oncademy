@@ -6,17 +6,19 @@ import { assets } from '../../assets/assets';
 import humanizeDuration from 'humanize-duration'
 import Footer from '../../components/students/Footer';
 import YouTube from 'react-youtube';
+import { toast } from 'react-toastify';
+
 const CourseDetailPage = () => {
 const {id} = useParams();
 
 const [courseData,setCourseData] = useState(null);
 const [openSections, setOpenSections] = useState({});
 const [playerData, setPlayerData] = useState(null);
-const {currency} = useContext(AppContext);
-const [_isAlreadyEnrolled, _setIsAlreadyEnrolled] = useState(false)
+const [isAlreadyEnrolled, setIsAlreadyEnrolled] = useState(false)
 
 
-const {allCourses,calculateChapterTime,
+const { allCourses,
+        calculateChapterTime,
         calculateCourseDuration,
         calculateNoOfLectures,
         calculateRating,
@@ -24,8 +26,64 @@ const {allCourses,calculateChapterTime,
         ratingUpdateTrigger,
         toggleFavoriteCourse,
         isCourseFavorite,
-        addToViewHistory} = useContext(AppContext);
-  
+        addToViewHistory,
+        currency,
+        backendUrl,
+        userData,
+        getToken} = useContext(AppContext);
+
+  const fetchCourseData = async () => {
+    try {
+      const{data} = await axios.get(backendUrl + '/api/courses/' + id);
+      
+      if(data.success) {
+        setCourseData(data.courseData);
+      }else {
+        toast.error(data.message);
+      }
+    }catch (error) {
+      toast.error(error.message);
+    }
+  }
+
+  const enrollCourse = async () => {
+    try {
+      
+      if(!userData) {
+        return toast.warn('Please login to enroll in the course.');
+      }
+      if(isAlreadyEnrolled){
+        return toast.warn('You are already enrolled in this course.');
+      }
+
+      const token = await getToken();
+      const {data} = await axios.post(backendUrl + '/api/user/purchase'
+        ,{courseId: courseData._id}
+        ,{headers: {Authorization: `Bearer ${token}`}})
+
+      if(data.success) {
+        const {session_url} = data;
+        window.location.replace(session_url);
+      }else {
+        toast.error(data.message);
+      }
+
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
+  useEffect(() => {
+    fetchCourseData();
+  }, []);
+
+  useEffect(() => {
+    if(userData && courseData) {
+      setIsAlreadyEnrolled(userData.enrolledCourses.includes(courseData._id));
+    }
+  },[userData, courseData]);
+
+  /*
   useEffect(() => {
     const findCourse = allCourses.find(course => course._id === id);
     setCourseData(findCourse);
@@ -38,7 +96,8 @@ const {allCourses,calculateChapterTime,
   useEffect(() => {
     console.log('Rating update trigger changed:', ratingUpdateTrigger);
   }, [ratingUpdateTrigger]);
-   const toggleSection = (index) => {
+  */
+  const toggleSection = (index) => {
     setOpenSections((prev) => ({
       ...prev,
       [index]: !prev[index],
@@ -196,8 +255,8 @@ const {allCourses,calculateChapterTime,
               </div>
 
               {/* Enroll Button */}
-              <button className="w-full py-3 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors shadow-md">
-                {_isAlreadyEnrolled ? "Already Enrolled" : "Enroll Now"}
+              <button onClick={enrollCourse} className="w-full py-3 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors shadow-md">
+                {isAlreadyEnrolled ? "Already Enrolled" : "Enroll Now"}
               </button>
 
               {/* Course Features */}

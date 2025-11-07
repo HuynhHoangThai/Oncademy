@@ -1,17 +1,44 @@
+import React, {useContext} from 'react'
 import { assets } from '../../assets/assets'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useClerk, UserButton, useUser } from '@clerk/clerk-react';
-import { useContext } from 'react';
 import { AppContext } from '../../context/AppContext';
+import axios from 'axios';
+import { toast } from 'react-toastify';
 
 const NavBar = () => {
-  const {isEducator} = useContext(AppContext);
+  const {isEducator, backendUrl, setIsEducator, getToken} = useContext(AppContext);
   const navigate = useNavigate();
   const location = useLocation();
+
   const isCourseListPage = location.pathname.includes('/course-list');
+
   const {openSignIn} = useClerk();
   const { user } = useUser();
   
+  const becomeEducator = async () => {
+    try {
+      if(isEducator){
+        navigate('/educator');
+        return;
+      }
+      const token = await getToken();
+      const {data} = await axios.get(backendUrl + '/api/educator/update-role'
+        ,{headers: {Authorization: `Bearer ${token}`}})
+      
+      if(data.success) {
+        setIsEducator(true);
+        toast.success(data.message);
+      }else {
+        toast.error(data.message);
+      }
+
+
+    } catch (error) {
+      toast.error("Something went wrong. Please try again later.");
+    }
+  }
+
   return (
     <div className={`flex items-center justify-between px-4 sm:px-10 md:px-14 lg:px-36 border-b border-gray-500 py-4 ${isCourseListPage ? 'bg-white' : 'bg-cyan-100/70'}`}>
       <Link to="/">
@@ -21,7 +48,7 @@ const NavBar = () => {
         <div className='flex items-center gap-5'>
         { user &&
         <>
-          <button onClick={()=>{navigate('/educator')}} className="text-gray-600 hover:text-blue-600 transition duration-200 font-medium">{isEducator?'Educator Dashboard':'Become our Educator'}</button>
+          <button onClick={becomeEducator} className="text-gray-600 hover:text-blue-600 transition duration-200 font-medium">{isEducator?'Educator Dashboard':'Become our Educator'}</button>
           <span className="text-gray-400">|</span>
           <Link to="/my-enrollments" className="text-gray-600 hover:text-blue-600 transition duration-200 font-medium">My Enrollments</Link>
           <span className="text-gray-400">|</span>

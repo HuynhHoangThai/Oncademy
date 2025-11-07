@@ -14,6 +14,8 @@ export const getAllCourse = async (req, res) => {
     }
 
 }
+
+// Get Course Data By Id
 export const getCourseId = async (req, res) => {
 
     const { id } = req.params
@@ -39,3 +41,5 @@ export const getCourseId = async (req, res) => {
     }
 
 }
+
+

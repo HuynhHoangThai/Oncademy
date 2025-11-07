@@ -1,17 +1,31 @@
-import React, { useEffect, useState } from 'react'
-import { useContext } from 'react'
+import React, {useContext, useEffect, useState } from 'react'
 import { AppContext } from '../../context/AppContext'
 import Loading from '../../components/students/Loading';
+import { toast } from 'react-toastify';
 
 const MyCourses = () => {
-  const {currency, allCourses} = useContext(AppContext);
+
+  const {currency, backendUrl, isEducator, getToken} = useContext(AppContext);
   const [courses, setCourses] = useState(null)
+
   const fetchEducatorCourses = async () => {
-    setCourses(allCourses)
+    try {
+      const token = await getToken();
+      const {data} = await axios.get(backendUrl + '/api/educator/courses',
+        {headers: {Authorization: `Bearer ${token}`}})
+
+      data.success && setCourses(data.course)
+      
+    } catch (error) {
+      toast.error(error.message);
+    }
   }
+
   useEffect(() => {
-    fetchEducatorCourses()
-  }, [])
+    if(isEducator){
+      fetchEducatorCourses();
+    }
+  }, [isEducator]);
 
   return courses ? (
     <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 to-white flex flex-col items-center py-10 px-2">

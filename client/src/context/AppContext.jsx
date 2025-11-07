@@ -1,17 +1,28 @@
-import {createContext,useEffect,useState} from "react";
+import {createContext, useEffect, useState} from "react";
 import { dummyCourses } from "../assets/assets";
+import { data, useNavigate } from "react-router-dom";
 import humanizeDuration from "humanize-duration";
 import { useAuth, useUser } from '@clerk/clerk-react';
+import axios, { Axios } from "axios";
+import { toast } from "react-toastify";
 
-const AppContext = createContext()
+export const AppContext = createContext()
 
-const AppProvider = (props) => {
+export const AppProvider = (props) => {
+
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
     const {user} = useUser(); // Get current user from Clerk
+    const {getToken}=useAuth();
+
     const currency = import.meta.env.VITE_CURRENCY
+    const navigate = useNavigate()
+
     const [allCourses, setAllCourses] = useState([])
     const [isEducator, setIsEducator] = useState(true)
     const [enrolledCourses, setEnrolledCourses] = useState([])
-    const {getToken}=useAuth();
+    const [userData, setUserData] = useState(null)
+    
     
     
     // Use user-specific localStorage key
@@ -20,10 +31,44 @@ const AppProvider = (props) => {
     const [courseRatings, setCourseRatings] = useState({})
     const [ratingUpdateTrigger, setRatingUpdateTrigger] = useState(0)
     
-    
+    // Fetch all courses 
     const fecthAllCourses = async () => {
-        setAllCourses(dummyCourses)
+        try {
+            const {data} = await axios.get(backendUrl + '/api/courses/all')
+        
+            if(data.success) {
+                setAllCourses(data.courses)
+            }else {
+                toast.error(data.message)
+            }
+        } catch (error) {
+            toast.error(data.message)
+        }
     }
+
+    // Fetch userData
+    const fetchUserData = async () => {
+
+        if(user.publicMetadata.role === 'educator') {
+            setIsEducator(true)
+        }
+
+        try {
+            const token = await getToken();
+            const {data} = await axios.get(backendUrl + '/api/user/data',
+                {headers: {Authorization: `Bearer ${token}`}})
+
+            if(data.success) {
+                setUserData(data.user)
+            } else {
+                toast.error(data.message)
+            }
+        } catch (error) {
+            toast.error(error.message)
+        }
+    }
+
+    // Calculate average rating of course
     const caculateRating =(course) => {
         if(course.courseRating.length === 0) {
             return 0;
@@ -32,7 +77,7 @@ const AppProvider = (props) => {
         course.courseRating.forEach(rating=> {  
             totalRating += rating.rating
         })
-        return totalRating / course.courseRating.length
+        return Math.floor(totalRating / course.courseRating.length);
     }
     const calculateChapterTime= (chapter)=> {
         let time=0
@@ -54,8 +99,21 @@ const AppProvider = (props) => {
         });
         return totalLectures;
     }
+
     const fetchUserEnrolledCourses = async () => {
-        setEnrolledCourses(dummyCourses)
+        try {
+            const token = await getToken();
+            const {data} = await axios.get(backendUrl + '/api/user/enrolled-courses'
+                , {headers: {Authorization: `Bearer ${token}`}})
+            
+            if(data.success) {
+                setEnrolledCourses(data.enrolledCourses.reverse())
+            }else {
+                toast.error(data.message)
+            }
+        } catch (error) {
+            
+        }
     }
 
     // Rating functions
@@ -112,17 +170,18 @@ const AppProvider = (props) => {
         const userCount = (courseRatings[course._id] || []).length;
         return dummyCount + userCount;
     }
+
     useEffect(() => {
         fecthAllCourses()
-        fetchUserEnrolledCourses()
     },[])
-    const logToken=async()=>{
-        console.log(await getToken());
-    }
+
     useEffect(() => {
         if(user) {
-        logToken()};
+            fetchUserData()
+            fetchUserEnrolledCourses()
+        }
     }, [user]);
+
     // Load ratings when user is ready or changes
     // Load all ratings (all users) from localStorage
     useEffect(() => {
@@ -201,7 +260,8 @@ const AppProvider = (props) => {
 
     const value = {
         currency,
-        allCourses, 
+        allCourses,
+        navigate,
         caculateRating,
         calculateRating,
         isEducator, 
@@ -224,7 +284,12 @@ const AppProvider = (props) => {
         viewHistory,
         addToViewHistory,
         getViewHistory,
-        clearViewHistory
+        clearViewHistory,
+        backendUrl,
+        userData,
+        setUserData,
+        getToken,
+        fecthAllCourses,
     };
     return (
         <AppContext.Provider value={value}>

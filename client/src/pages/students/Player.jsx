@@ -1,4 +1,4 @@
-import { useContext, useEffect, useCallback } from 'react';
+import { useContext, useEffect, useCallback, use } from 'react';
 import { AppContext } from '../../context/AppContext';
 import { useParams } from 'react-router-dom';
 import { assets } from '../../assets/assets';
@@ -7,32 +7,115 @@ import humanizeDuration from 'humanize-duration';
 import YouTube from 'react-youtube';
 import Footer from '../../components/students/Footer';
 import Rating from '../../components/students/Rating';
+import { toast } from 'react-toastify';
+import Loading from '../../components/students/Loading';
 
 const Player = () => {
-  const {enrolledCourses, calculateChapterTime, addCourseRating, getUserRatingForCourse, toggleFavoriteCourse, isCourseFavorite}= useContext(AppContext);
+  const {enrolledCourses
+        , calculateChapterTime
+        , addCourseRating
+        , getUserRatingForCourse
+        , toggleFavoriteCourse
+        , isCourseFavorite
+        , backendUrl
+        , getToken
+        , userData
+        , fetchUserEnrolledCourses}= useContext(AppContext);
+
   const {courseId}=useParams();
-  const [courseData,setCourseData]=useState(null);
+  const [courseData,setCourseData] = useState(null);
   const [openSections, setOpenSections] = useState({});
   const [playerData, setPlayerData] = useState(null);
   const [completedLectures, setCompletedLectures] = useState(new Set());
   
-  const getCourseData = useCallback(() => {
+  const [progressData, setProgressData] = useState(null);
+  const [initialRating, setInitialRating] = useState(0);
+
+
+  const getCourseData = () => {
     enrolledCourses.map((course)=>{
       if(course._id === courseId) {
         setCourseData(course);
+        course.courseRating.map((item)=>{
+          if(item.userId === userData._id){
+            setInitialRating(item.rating);
+          }
+        })
       }
     })
-  }, [enrolledCourses, courseId])
-  useEffect(() => {
-    getCourseData();
+  }
 
-  },[getCourseData])
-    const toggleSection = (index) => {
+  useEffect(() => {
+    if(enrolledCourses.length > 0){
+      getCourseData();
+    }
+  },[enrolledCourses])
+
+  const markLecturAsComplete = async (lectureId) => {
+    try {
+      const token = await getToken();
+      const { data } = await axios.post(backendUrl + '/api/user/update-course-progress',
+        { courseId, lectureId },
+        { headers: { Authorization: `Bearer ${token}` }});
+      
+      if (data.success) {
+        toast.success(data.message);
+        getCourseProgress();
+      }else{
+        toast.error(data.message);
+      }
+
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
+  const getCourseProgress = async () => {
+    try {
+      const token = await getToken();
+      const { data } = await axios.post(backendUrl + '/api/user/get-course-progress' ,
+        { courseId },
+        { headers: { Authorization: `Bearer ${token}` }});
+
+      if (data.success) {
+        toast.success(data.message);
+      }else{
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
+  const handleRate = async (rating) => {
+    try {
+      const token = await getToken();
+      const { data } = await axios.post(backendUrl + '/api/courses/rate-course',
+        { courseId, rating },
+        { headers: { Authorization: `Bearer ${token}` }});
+
+      if (data.success) {
+        toast.success(data.message);
+        fetchUserEnrolledCourses();
+      }else{
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
+  useffect(() => {
+    getCourseProgress();
+  }, []);
+
+  const toggleSection = (index) => {
     setOpenSections((prev) => ({
       ...prev,
       [index]: !prev[index],
     }));
   };
+
   const getAllLectures = () => {
     if (!courseData) return [];
     let allLectures = [];
@@ -49,6 +132,7 @@ const Player = () => {
     });
     return allLectures;
   };
+
   const goToPrevious = () => {
     const allLectures = getAllLectures();
     const currentIndex = allLectures.findIndex(
@@ -58,6 +142,7 @@ const Player = () => {
       setPlayerData(allLectures[currentIndex - 1]);
     }
   };
+
   const goToNext = () => {
     const allLectures = getAllLectures();
     const currentIndex = allLectures.findIndex(
@@ -67,12 +152,14 @@ const Player = () => {
       setPlayerData(allLectures[currentIndex + 1]);
     }
   };
+/*
   const markLectureComplete = () => {
     if (playerData) {
       const lectureKey = `${playerData.chapter}-${playerData.lecture}`;
       setCompletedLectures(prev => new Set([...prev, lectureKey]));
     }
   };
+*/
   const isLectureCompleted = (chapterNum, lectureNum) => {
     const lectureKey = `${chapterNum}-${lectureNum}`;
     return completedLectures.has(lectureKey);
@@ -83,7 +170,8 @@ const Player = () => {
       addCourseRating(courseData._id, rating);
     }
   };
-  return (
+
+  return courseData ? (
     <>
     <div className="min-h-screen flex flex-col">
       <div className="flex-1">
@@ -126,7 +214,7 @@ const Player = () => {
             <h1 className="lg:text-xl md:text-lg text-base font-bold text-gray-800">Rate this course:</h1>
             <Rating 
               initialRating={courseData ? getUserRatingForCourse(courseData._id) : 0} 
-              onRate={handleCourseRating}
+              onRate={handleRate}
             />
             {courseData && getUserRatingForCourse(courseData._id) > 0 && (
               <span className="text-sm text-gray-600">
@@ -193,7 +281,7 @@ const Player = () => {
                         </button>
                       </div>
                       <button 
-                        onClick={markLectureComplete}
+                        onClick={() => markLecturAsComplete(playerData.lectureId)}
                         disabled={isLectureCompleted(playerData.chapter, playerData.lecture)}
                         className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
                           isLectureCompleted(playerData.chapter, playerData.lecture) 
@@ -222,7 +310,7 @@ const Player = () => {
       <Footer />
     </div>
     </>
-  )
+  ) : <Loading />;
 }
 
 export default Player
