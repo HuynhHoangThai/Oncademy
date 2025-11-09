@@ -5,7 +5,7 @@ import {Line} from 'rc-progress'
 import { useState} from 'react';
 import { useNavigate } from 'react-router-dom';
 import Footer from '../../components/students/Footer';
-
+import Loading from '../../components/students/Loading';
 const MyEnrollments = () => {
   const { enrolledCourses, calculateCourseDuration} = useContext(AppContext);
   const navigate = useNavigate();
@@ -81,7 +81,9 @@ const MyEnrollments = () => {
       </div>
     </div>
     <Footer />
+    <Loading />
   </>
+  
   )
 }
 
