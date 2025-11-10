@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import {createContext, useEffect, useState} from "react";
 import { dummyCourses } from "../assets/assets";
 import { data, useNavigate } from "react-router-dom";
@@ -5,6 +6,15 @@ import humanizeDuration from "humanize-duration";
 import { useAuth, useUser } from '@clerk/clerk-react';
 import axios, { Axios } from "axios";
 import { toast } from "react-toastify";
+=======
+import {createContext,useEffect,useState} from "react";
+
+import humanizeDuration from "humanize-duration";
+import { useAuth, useUser } from '@clerk/clerk-react';
+import axios from "axios";
+import { toast } from "react-toastify";
+
+>>>>>>> fbb53938042728fd323b5c2b1836eb4eaa5196e2
 
 export const AppContext = createContext()
 
@@ -19,17 +29,23 @@ export const AppProvider = (props) => {
     const navigate = useNavigate()
 
     const [allCourses, setAllCourses] = useState([])
-    const [isEducator, setIsEducator] = useState(true)
+    const [isEducator, setIsEducator] = useState(false)
     const [enrolledCourses, setEnrolledCourses] = useState([])
     const [userData, setUserData] = useState(null)
+<<<<<<< HEAD
     
     
+=======
+    const {getToken}=useAuth();
+    const backendUrl=import.meta.env.VITE_BACKEND_URL;
+>>>>>>> fbb53938042728fd323b5c2b1836eb4eaa5196e2
     
     // Use user-specific localStorage key
     const getUserRatingsKey = () => user ? `courseRatings_${user.id}` : 'courseRatings_guest';
     
     const [courseRatings, setCourseRatings] = useState({})
     const [ratingUpdateTrigger, setRatingUpdateTrigger] = useState(0)
+<<<<<<< HEAD
     
     // Fetch all courses 
     const fecthAllCourses = async () => {
@@ -43,6 +59,47 @@ export const AppProvider = (props) => {
             }
         } catch (error) {
             toast.error(data.message)
+=======
+   
+    const fetchUserData = async () => {
+
+        try {
+
+            if (user.publicMetadata.role === 'educator') {
+                setIsEducator(true)
+            }
+
+            const token = await getToken();
+
+            const { data } = await axios.get(backendUrl + '/api/user/data',
+                { headers: { Authorization: `Bearer ${token}` } })
+
+            if (data.success) {
+                setUserData(data.user)
+            } else (
+                toast.error(data.message)
+            )
+
+        } catch (error) {
+            toast.error(error.message)
+        }
+
+    }
+    
+    const fecthAllCourses = async () => {
+         try {
+
+            const { data } = await axios.get(backendUrl + '/api/course/all');
+
+            if (data.success) {
+                setAllCourses(data.courses)
+            } else {
+                toast.error(data.message)
+            }
+
+        } catch (error) {
+            toast.error(error.message)
+>>>>>>> fbb53938042728fd323b5c2b1836eb4eaa5196e2
         }
     }
 
@@ -85,23 +142,32 @@ export const AppProvider = (props) => {
         return humanizeDuration(time *60 * 1000, { unit:["h","m"] });
     }
     const calculateCourseDuration = (course) => {
-        let time=0
-        course.courseContent.map((chapter)=>chapter.chapterContent.map((lecture)=> time+=lecture.lectureDuration ))
-        return humanizeDuration(time *60 * 1000, { unit:["h","m"] });
-
+        let time = 0;
+        if (Array.isArray(course?.courseContent)) {
+            course.courseContent.forEach(
+                chapter => Array.isArray(chapter.chapterContent) &&
+                    chapter.chapterContent.forEach(
+                        lecture => time += lecture.lectureDuration
+                    )
+            );
+        }
+        return humanizeDuration(time * 60 * 1000, { unit: ["h", "m"] });
     }
-     const calculateNoOfLectures = (course) => {
+    const calculateNoOfLectures = (course) => {
         let totalLectures = 0;
-        course.courseContent.forEach(chapter => {
-            if (Array.isArray(chapter.chapterContent)) {
-                totalLectures += chapter.chapterContent.length;
-            }
-        });
+        if (Array.isArray(course?.courseContent)) {
+            course.courseContent.forEach(chapter => {
+                if (Array.isArray(chapter.chapterContent)) {
+                    totalLectures += chapter.chapterContent.length;
+                }
+            });
+        }
         return totalLectures;
     }
 
     const fetchUserEnrolledCourses = async () => {
         try {
+<<<<<<< HEAD
             const token = await getToken();
             const {data} = await axios.get(backendUrl + '/api/user/enrolled-courses'
                 , {headers: {Authorization: `Bearer ${token}`}})
@@ -113,6 +179,23 @@ export const AppProvider = (props) => {
             }
         } catch (error) {
             
+=======
+            if (!user) return setEnrolledCourses([])
+            const token = await getToken()
+            const { data } = await axios.get(backendUrl + '/api/user/enrolled-courses', {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            if (data.success) {
+                setEnrolledCourses(Array.isArray(data.enrolledCourses) ? data.enrolledCourses : [])
+            } else {
+                toast.error(data.message)
+                setEnrolledCourses([])
+            }
+        } catch (error) {
+            console.error('fetchUserEnrolledCourses error', error)
+            toast.error(error.message)
+            setEnrolledCourses([])
+>>>>>>> fbb53938042728fd323b5c2b1836eb4eaa5196e2
         }
     }
 
@@ -173,12 +256,34 @@ export const AppProvider = (props) => {
 
     useEffect(() => {
         fecthAllCourses()
+<<<<<<< HEAD
     },[])
 
     useEffect(() => {
         if(user) {
             fetchUserData()
             fetchUserEnrolledCourses()
+=======
+       
+    }, [])
+    useEffect(() => {
+        if (user) {
+            fetchUserData()
+            fetchUserEnrolledCourses()
+        } else {
+            // Reset educator flag when no user
+            setIsEducator(false)
+            setUserData(null)
+            setEnrolledCourses([])
+        }
+    }, [user])
+    const logToken=async()=>{
+        console.log(await getToken());
+    }
+    useEffect(() => {
+        if (user) {
+            logToken()
+>>>>>>> fbb53938042728fd323b5c2b1836eb4eaa5196e2
         }
     }, [user]);
 
@@ -285,11 +390,16 @@ export const AppProvider = (props) => {
         addToViewHistory,
         getViewHistory,
         clearViewHistory,
+<<<<<<< HEAD
         backendUrl,
         userData,
         setUserData,
         getToken,
         fecthAllCourses,
+=======
+        userData,
+        setUserData
+>>>>>>> fbb53938042728fd323b5c2b1836eb4eaa5196e2
     };
     return (
         <AppContext.Provider value={value}>

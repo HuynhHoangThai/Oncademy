@@ -5,9 +5,13 @@ import {Line} from 'rc-progress'
 import { useState} from 'react';
 import { useNavigate } from 'react-router-dom';
 import Footer from '../../components/students/Footer';
+<<<<<<< HEAD
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
+=======
+import Loading from '../../components/students/Loading';
+>>>>>>> fbb53938042728fd323b5c2b1836eb4eaa5196e2
 const MyEnrollments = () => {
   const { enrolledCourses
         , calculateCourseDuration
@@ -109,7 +113,9 @@ const MyEnrollments = () => {
       </div>
     </div>
     <Footer />
+    <Loading />
   </>
+  
   )
 }
 

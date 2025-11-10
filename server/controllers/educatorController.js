@@ -9,7 +9,7 @@ export const updateRoleToEducator = async (req, res) => {
 
     try {
 
-        const userId = req.auth.userId
+    const userId = typeof req.auth === 'function' ? req.auth().userId : req.auth.userId
 
         await clerkClient.users.updateUserMetadata(userId, {
             publicMetadata: {
@@ -31,9 +31,9 @@ export const addCourse = async (req, res) => {
 
         const { courseData } = req.body
 
-        const imageFile = req.file
+    const imageFile = req.file
 
-        const educatorId = req.auth.userId
+    const educatorId = typeof req.auth === 'function' ? req.auth().userId : req.auth.userId
 
         if (!imageFile) {
             return res.json({ success: false, message: 'Thumbnail Not Attached' })
@@ -64,7 +64,7 @@ export const addCourse = async (req, res) => {
 export const getEducatorCourses = async (req, res) => {
     try {
 
-        const educator = req.auth.userId
+    const educator = typeof req.auth === 'function' ? req.auth().userId : req.auth.userId
 
         const courses = await Course.find({ educator })
 
@@ -79,7 +79,7 @@ export const getEducatorCourses = async (req, res) => {
 // Get Educator Courses Dashboard Data
 export const educatorDashboardData = async (req, res) => {
     try {
-        const educator = req.auth.userId;
+    const educator = typeof req.auth === 'function' ? req.auth().userId : req.auth.userId;
 
         const courses = await Course.find({ educator });
 

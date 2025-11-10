@@ -4,6 +4,7 @@ import Loading from '../../components/students/Loading';
 import { toast } from 'react-toastify';
 
 const MyCourses = () => {
+<<<<<<< HEAD
 
   const {currency, backendUrl, isEducator, getToken} = useContext(AppContext);
   const [courses, setCourses] = useState(null)
@@ -26,6 +27,14 @@ const MyCourses = () => {
       fetchEducatorCourses();
     }
   }, [isEducator]);
+=======
+  const {currency, allCourses} = useContext(AppContext);
+  const [courses, setCourses] = useState([])
+  useEffect(() => {
+    // Keep local courses in sync with context
+    setCourses(allCourses || [])
+  }, [allCourses])
+>>>>>>> fbb53938042728fd323b5c2b1836eb4eaa5196e2
 
   return courses ? (
     <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 to-white flex flex-col items-center py-10 px-2">
@@ -48,8 +57,20 @@ const MyCourses = () => {
                     <img src={course.courseThumbnail} alt="Course" className="w-14 h-14 rounded-lg object-cover border-2 border-blue-200 shadow" />
                     <span className="truncate font-semibold text-lg">{course.courseTitle}</span>
                   </td>
-                  <td className="px-4 py-3 text-center font-bold text-blue-700">{currency}{Math.floor(course.enrolledStudents.length * (course.coursePrice - course.discount * course.coursePrice / 100))}</td>
-                  <td className="px-4 py-3 text-center font-medium">{course.enrolledStudents.length}</td>
+                  {
+                    (() => {
+                      const students = Array.isArray(course.enrolledStudents) ? course.enrolledStudents.length : 0
+                      const price = Number(course.coursePrice || 0)
+                      const discount = Number(course.discount || 0)
+                      const revenue = Math.floor(students * (price - (discount * price) / 100))
+                      return (
+                        <>
+                          <td className="px-4 py-3 text-center font-bold text-blue-700">{currency}{revenue}</td>
+                          <td className="px-4 py-3 text-center font-medium">{students}</td>
+                        </>
+                      )
+                    })()
+                  }
                   <td className="px-4 py-3 text-center text-gray-500">{new Date(course.createdAt).toLocaleDateString()}</td>
                 </tr>
               ))}

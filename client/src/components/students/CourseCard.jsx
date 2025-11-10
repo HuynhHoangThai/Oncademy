@@ -47,7 +47,7 @@ const CourseCard = ({course}) => {
         <img className="w-full h-48 object-cover" src={course.courseThumbnail} alt={course.courseTitle} />
         <div className="p-4 text-left">
           <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2 min-h-[3.5rem]">{course.courseTitle}</h3>
-          <p className="text-sm text-gray-600 mb-3">{course.educator.name}</p>
+          <p className="text-sm text-gray-600 mb-3">{course.educator?.name || ''}</p>
           <div className="flex items-center gap-2 mb-3">
             <p className="text-sm font-medium text-gray-700">{rating}</p>
             <div className='flex'>

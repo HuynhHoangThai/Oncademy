@@ -5,7 +5,7 @@ export const protectEducator = async (req,res,next) => {
 
     try {
 
-        const userId = req.auth.userId
+    const userId = typeof req.auth === 'function' ? req.auth().userId : req.auth.userId
         
         const response = await clerkClient.users.getUser(userId)
 
