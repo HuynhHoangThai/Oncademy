@@ -1,5 +1,5 @@
 import { AppContext } from '../../context/AppContext';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import{ useEffect, useState, useContext } from 'react';
 import Loading from '../../components/students/Loading';
 import { assets } from '../../assets/assets';
@@ -13,6 +13,7 @@ import { useCourse } from '../../hooks/useCourses';
 
 const CourseDetailPage = () => {
 const {id} = useParams();
+const navigate = useNavigate();
 
 const [courseData,setCourseData] = useState(null);
 const [openSections, setOpenSections] = useState({});
@@ -95,7 +96,16 @@ const {calculateChapterTime,
         // Redirect to Stripe checkout page
         window.location.href = data.sessionUrl;
       } else {
-        toast.error(data.message || 'Failed to create checkout session');
+        // Check if already enrolled
+        if (data.alreadyEnrolled) {
+          toast.info(data.message || 'You are already enrolled in this course');
+          // Optionally redirect to My Enrollments
+          setTimeout(() => {
+            navigate('/my-enrollments');
+          }, 2000);
+        } else {
+          toast.error(data.message || 'Failed to create checkout session');
+        }
         setIsPurchasing(false);
       }
     } catch (error) {
