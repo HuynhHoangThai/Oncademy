@@ -138,28 +138,35 @@ export const syncEducatorDashboard = async (educatorId) => {
         const dashboard = await Dashboard.findOneAndUpdate(
             { educatorId },
             {
-                educatorId,
-                totalCourses,
-                totalEarnings,
-                totalEnrollments,
-                totalPurchases,
-                recentEnrollments,
-                courseStats,
-                topCourses,
-                monthlyEarnings: Object.entries(monthlyEarnings).map(([month, earnings]) => ({
-                    month,
-                    earnings
-                })),
-                enrolledStudents: enrolledStudents.map(student => ({
-                    id: student._id,
-                    name: student.name,
-                    email: student.email,
-                    imageUrl: student.imageUrl,
-                    joinedAt: student.createdAt
-                })),
-                lastUpdated: new Date()
+                $set: {
+                    educatorId,
+                    totalCourses,
+                    totalEarnings,
+                    totalEnrollments,
+                    totalPurchases,
+                    recentEnrollments,
+                    courseStats,
+                    topCourses,
+                    monthlyEarnings: Object.entries(monthlyEarnings).map(([month, earnings]) => ({
+                        month,
+                        earnings
+                    })),
+                    enrolledStudents: enrolledStudents.map(student => ({
+                        id: student._id,
+                        name: student.name,
+                        email: student.email,
+                        imageUrl: student.imageUrl,
+                        joinedAt: student.createdAt
+                    })),
+                    lastUpdated: new Date()
+                }
             },
-            { upsert: true, new: true }
+            { 
+                upsert: true, 
+                new: true,
+                setDefaultsOnInsert: true,
+                runValidators: true
+            }
         );
 
         return dashboard;
