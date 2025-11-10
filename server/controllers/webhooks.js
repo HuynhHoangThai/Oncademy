@@ -103,11 +103,22 @@ export const  stripeWebhooks = async (request, response) => {
       const userData = await User.findById(purchaseData.userId);
       const courseData = await Course.findById(purchaseData.courseId.toString());
       
-      courseData.enrolledStudents.push(userData);
-      await courseData.save();
+      // Check if student is already enrolled to prevent duplicates
+      const isAlreadyEnrolled = courseData.enrolledStudents.some(
+        studentId => studentId.toString() === userData._id.toString()
+      );
       
-      userData.enrolledCourses.push(courseData);
-      await userData.save();
+      if (!isAlreadyEnrolled) {
+        courseData.enrolledStudents.push(userData._id);
+        await courseData.save();
+        
+        userData.enrolledCourses.push(courseData._id);
+        await userData.save();
+        
+        console.log(`✅ Student ${userData.name} enrolled in course ${courseData.courseTitle}`);
+      } else {
+        console.log(`ℹ️ Student ${userData.name} already enrolled in course ${courseData.courseTitle}`);
+      }
       
       purchaseData.status = 'completed';
       await purchaseData.save();

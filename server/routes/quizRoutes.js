@@ -13,13 +13,14 @@ import {
   gradeAttempt,
   getEducatorQuizStats,
   getStudentQuizAttempts,
+  getMyAttempts,
   updateQuiz,
   deleteQuiz,
   toggleQuizPublish,
   getQuizSubmissions,
   downloadExcelTemplate
 } from '../controllers/quizController.js';
-import { protectEducator } from '../middlewares/authMiddleware.js';
+import { protectEducator, protectRoute } from '../middlewares/authMiddleware.js';
 
 const quizRouter = express.Router();
 
@@ -48,6 +49,7 @@ quizRouter.post('/create', protectEducator, createQuiz);
 quizRouter.post('/upload-excel', protectEducator, upload.single('file'), uploadQuizFromExcel);
 quizRouter.get('/stats/educator', protectEducator, getEducatorQuizStats); // Get educator quiz stats
 quizRouter.get('/stats/student-attempts', protectEducator, getStudentQuizAttempts); // Get student quiz attempts
+quizRouter.get('/my-attempts', protectRoute, getMyAttempts); // Get my quiz attempts (student)
 quizRouter.get('/course/:courseId', protectEducator, getCourseQuizzes);
 quizRouter.get('/course/:courseId/published', getPublishedQuizzes); // For students
 quizRouter.get('/:quizId/take', getQuizForTaking); // For students to take quiz

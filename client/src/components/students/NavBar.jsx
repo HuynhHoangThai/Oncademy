@@ -25,6 +25,13 @@ const NavBar = () => {
           <span className="text-gray-400">|</span>
           <Link to="/my-enrollments" className="text-gray-600 hover:text-blue-600 transition duration-200 font-medium">My Enrollments</Link>
           <span className="text-gray-400">|</span>
+          <Link to="/my-quiz-results" className="text-gray-600 hover:text-blue-600 transition duration-200 font-medium flex items-center gap-1">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+            </svg>
+            My Quizzes
+          </Link>
+          <span className="text-gray-400">|</span>
           <Link to="/favorites" className="text-gray-600 hover:text-blue-600 transition duration-200 font-medium flex items-center gap-1">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="m12 21.35-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
@@ -51,6 +58,12 @@ const NavBar = () => {
           <button className="text-gray-600 hover:text-blue-600 transition duration-200">Become Educator</button>
           <span className="text-gray-400">|</span>
           <Link to="/my-enrollments" className="text-gray-600 hover:text-blue-600 transition duration-200">Enrollments</Link>
+          <span className="text-gray-400">|</span>
+          <Link to="/my-quiz-results" className="text-gray-600 hover:text-blue-600 transition duration-200">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+            </svg>
+          </Link>
           <span className="text-gray-400">|</span>
           <Link to="/favorites" className="text-gray-600 hover:text-blue-600 transition duration-200">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

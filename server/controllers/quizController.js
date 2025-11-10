@@ -1013,6 +1013,100 @@ const getStudentQuizAttempts = async (req, res) => {
   }
 };
 
+// Get my quiz attempts (for students)
+const getMyAttempts = async (req, res) => {
+  try {
+    const userId = req.userId || getUserId(req);
+    
+    if (!userId) {
+      return res.json({ success: false, message: 'User ID not found' });
+    }
+
+    // Find all attempts by this user - using studentId field from QuizAttempt model
+    const attempts = await QuizAttempt.find({ studentId: userId })
+      .populate({
+        path: 'quizId',
+        select: 'quizTitle courseId',
+        populate: {
+          path: 'courseId',
+          select: 'courseTitle'
+        }
+      })
+      .populate({
+        path: 'courseId',
+        select: 'courseTitle'
+      })
+      .sort({ submittedAt: -1 });
+
+    // Transform data for frontend
+    const transformedAttempts = [];
+    
+    for (const attempt of attempts) {
+      let courseTitle = 'Unknown Course';
+      let quizTitle = attempt.quizId?.quizTitle || 'Unknown Quiz';
+      
+      // Try to get courseId from Quiz or QuizAttempt
+      let courseIdValue = attempt.quizId?.courseId || attempt.courseId;
+      
+      // If courseId exists
+      if (courseIdValue) {
+        // Check if already populated (has courseTitle property)
+        if (courseIdValue.courseTitle) {
+          courseTitle = courseIdValue.courseTitle;
+        } else {
+          // courseId is ObjectId, need to manually fetch
+          try {
+            const course = await Course.findById(courseIdValue);
+            if (course) {
+              courseTitle = course.courseTitle;
+            }
+          } catch (err) {
+            console.error('Error fetching course:', err.message);
+          }
+        }
+      } else {
+        // Last resort: try to get from raw quiz
+        if (attempt.quizId?._id) {
+          try {
+            const quiz = await Quiz.findById(attempt.quizId._id).lean();
+            if (quiz?.courseId) {
+              const course = await Course.findById(quiz.courseId);
+              if (course) {
+                courseTitle = course.courseTitle;
+              }
+            }
+          } catch (err) {
+            console.error('Error in fallback fetch:', err.message);
+          }
+        }
+      }
+      
+      transformedAttempts.push({
+        _id: attempt._id,
+        quizId: attempt.quizId?._id,
+        quizTitle: quizTitle,
+        courseTitle: courseTitle,
+        status: attempt.status,
+        submittedAt: attempt.submittedAt,
+        attemptNumber: attempt.attemptNumber,
+        timeSpent: attempt.timeSpent,
+        scoring: attempt.scoring,
+        answers: attempt.answers,
+        createdAt: attempt.createdAt
+      });
+    }
+
+    res.json({
+      success: true,
+      attempts: transformedAttempts
+    });
+
+  } catch (error) {
+    console.error('Get my attempts error:', error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
 export {
   createQuiz,
   uploadQuizFromExcel,
@@ -1025,6 +1119,7 @@ export {
   gradeAttempt,
   getEducatorQuizStats,
   getStudentQuizAttempts,
+  getMyAttempts,
   getQuizDetails,
   updateQuiz,
   deleteQuiz,

@@ -31,7 +31,7 @@ const {calculateChapterTime,
         calculateNoOfLectures,
         calculateRating,
         getTotalReviewCount,
-        ratingUpdateTrigger,
+        
         toggleFavoriteCourse,
         isCourseFavorite,
         addToViewHistory} = useContext(AppContext);
@@ -66,7 +66,8 @@ const {calculateChapterTime,
         addToViewHistory(id);
       }
     }
-  }, [courseResponse, id, addToViewHistory]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courseResponse, id]);
 
   const toggleSection = (index) => {
     setOpenSections((prev) => ({

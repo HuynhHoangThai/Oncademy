@@ -17,6 +17,7 @@ const Favorites = lazy(() => import('./pages/students/Favorites'))
 const ViewHistory = lazy(() => import('./pages/students/ViewHistory'))
 const QuizTaking = lazy(() => import('./pages/students/QuizTaking'))
 const QuizResult = lazy(() => import('./pages/students/QuizResult'))
+const MyQuizResults = lazy(() => import('./pages/students/MyQuizResults'))
 
 // Educator pages
 const Educator = lazy(() => import('./pages/educator/Educator'))
@@ -47,6 +48,7 @@ const App = () => {
         <Route path='/player/:courseId' element={<Player />} />
         <Route path='/quiz/:quizId' element={<QuizTaking />} />
         <Route path='/quiz/:quizId/result/:attemptId' element={<QuizResult />} />
+        <Route path='/my-quiz-results' element={<MyQuizResults />} />
         <Route path='/loading/:path' element={<Loading />} />
         <Route path='/educator' element={<Educator />}>
           <Route index element={<Dashboard />} />

@@ -93,6 +93,38 @@ export const purchaseCourse = async (req, res) => {
             return res.json({ success: false, message: 'Data Not Found' })
         }
 
+        // Check if user is already enrolled in this course
+        const isAlreadyEnrolled = courseData.enrolledStudents.some(
+            studentId => studentId.toString() === userId
+        );
+
+        if (isAlreadyEnrolled) {
+            return res.json({ 
+                success: false, 
+                message: 'You are already enrolled in this course',
+                alreadyEnrolled: true
+            });
+        }
+
+        // Check if there's a pending purchase for this course
+        const existingPurchase = await Purchase.findOne({
+            courseId: courseData._id,
+            userId,
+            status: { $in: ['pending', 'completed'] }
+        });
+
+        if (existingPurchase) {
+            if (existingPurchase.status === 'completed') {
+                return res.json({ 
+                    success: false, 
+                    message: 'You have already purchased this course',
+                    alreadyEnrolled: true
+                });
+            }
+            // If pending, allow creating new checkout session
+            console.log('Found pending purchase, creating new checkout session');
+        }
+
         const amount = Number((courseData.coursePrice - courseData.discount * courseData.coursePrice / 100).toFixed(2))
         
         const purchaseData = {
