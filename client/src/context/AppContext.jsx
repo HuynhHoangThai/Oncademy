@@ -49,7 +49,7 @@ const AppProvider = (props) => {
 
     }
     
-    const fecthAllCourses = async () => {
+    const fetchAllCourses = async () => {
          try {
 
             const { data } = await axios.get(backendUrl + '/api/course/all');
@@ -177,7 +177,7 @@ const AppProvider = (props) => {
         return dummyCount + userCount;
     }
     useEffect(() => {
-        fecthAllCourses()
+        fetchAllCourses()
        
     }, [])
     useEffect(() => {
@@ -191,14 +191,6 @@ const AppProvider = (props) => {
             setEnrolledCourses([])
         }
     }, [user])
-    const logToken=async()=>{
-        console.log(await getToken());
-    }
-    useEffect(() => {
-        if (user) {
-            logToken()
-        }
-    }, [user]);
     // Load ratings when user is ready or changes
     // Load all ratings (all users) from localStorage
     useEffect(() => {

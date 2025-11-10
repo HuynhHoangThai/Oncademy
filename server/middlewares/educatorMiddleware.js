@@ -1,15 +1,17 @@
+import { getUserId } from '../utils/authHelper.js';
+import { clerkClient } from '@clerk/express';
+
 const educatorMiddleware = async (req, res, next) => {
     try {
-        const auth = req.auth();
-        const userId = auth?.userId;
-        const sessionClaims = auth?.sessionClaims;
+        const userId = getUserId(req);
 
         if (!userId) {
             return res.status(401).json({ success: false, message: 'Unauthorized' });
         }
 
-        // Get role from Clerk session claims (publicMetadata)
-        const userRole = sessionClaims?.publicMetadata?.role;
+        // Get user role from Clerk
+        const user = await clerkClient.users.getUser(userId);
+        const userRole = user.publicMetadata?.role;
 
         if (userRole !== 'educator') {
             return res.status(403).json({ 
@@ -18,10 +20,11 @@ const educatorMiddleware = async (req, res, next) => {
             });
         }
 
+        // Set userId for downstream controllers
+        req.userId = userId;
         next();
     } catch (error) {
-        console.error('Educator middleware error:', error);
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: 'Internal server error' });
     }
 }
 

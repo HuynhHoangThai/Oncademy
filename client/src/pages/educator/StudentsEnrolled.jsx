@@ -77,9 +77,25 @@ const StudentsEnrolled = () => {
   useEffect(() => {
     loadAllData()
     
-    // Auto-refresh mỗi 30 giây
-    const interval = setInterval(loadAllData, 30000)
-    return () => clearInterval(interval)
+    // Auto-refresh khi tab visible và mỗi 5 phút
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadAllData()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        loadAllData()
+      }
+    }, 5 * 60 * 1000) // 5 minutes
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      clearInterval(interval)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

@@ -1,37 +1,41 @@
 import { Routes, Route, useMatch } from 'react-router-dom'
+import { lazy, Suspense } from 'react'
 import {ToastContainer} from 'react-toastify'
-
-// Student pages
-import Home from './pages/students/Home'
-import CourseList from './pages/students/CourseList'
-import CourseDetailPage from './pages/students/CourseDetailPage'
-import MyEnrollments from './pages/students/MyEnrollments'
-import Player from './pages/students/Player'
-import Favorites from './pages/students/Favorites'
-import ViewHistory from './pages/students/ViewHistory'
-import QuizTaking from './pages/students/QuizTaking'
-import QuizResult from './pages/students/QuizResult'
-
-// Educator pages
-import Educator from './pages/educator/Educator'
-import Dashboard from './pages/educator/Dashboard'
-import AddCourse from './pages/educator/AddCourse'
-import QuizManagement from './pages/educator/QuizManagement'
-import QuizBuilder from './pages/educator/QuizBuilder'
-import QuizSubmissions from './pages/educator/QuizSubmissions'
-import GradeQuiz from './pages/educator/GradeQuiz'
-import StudentsEnrolled from './pages/educator/StudentsEnrolled'
-import Navbar from './components/students/NavBar'
-import MyCourses from './pages/educator/MyCourses'
+import ErrorBoundary from './components/ErrorBoundary'
 
 // Components
 import Loading from './components/students/Loading'
+import Navbar from './components/students/NavBar'
+
+// Lazy load pages for code splitting
+const Home = lazy(() => import('./pages/students/Home'))
+const CourseList = lazy(() => import('./pages/students/CourseList'))
+const CourseDetailPage = lazy(() => import('./pages/students/CourseDetailPage'))
+const MyEnrollments = lazy(() => import('./pages/students/MyEnrollments'))
+const Player = lazy(() => import('./pages/students/Player'))
+const Favorites = lazy(() => import('./pages/students/Favorites'))
+const ViewHistory = lazy(() => import('./pages/students/ViewHistory'))
+const QuizTaking = lazy(() => import('./pages/students/QuizTaking'))
+const QuizResult = lazy(() => import('./pages/students/QuizResult'))
+
+// Educator pages
+const Educator = lazy(() => import('./pages/educator/Educator'))
+const Dashboard = lazy(() => import('./pages/educator/Dashboard'))
+const AddCourse = lazy(() => import('./pages/educator/AddCourse'))
+const QuizManagement = lazy(() => import('./pages/educator/QuizManagement'))
+const QuizBuilder = lazy(() => import('./pages/educator/QuizBuilder'))
+const QuizSubmissions = lazy(() => import('./pages/educator/QuizSubmissions'))
+const GradeQuiz = lazy(() => import('./pages/educator/GradeQuiz'))
+const StudentsEnrolled = lazy(() => import('./pages/educator/StudentsEnrolled'))
+const MyCourses = lazy(() => import('./pages/educator/MyCourses'))
 
 const App = () => {
   const isEducatorRoute = useMatch('/educator/*');
   return (
+    <ErrorBoundary>
     <div className='text-default min-h-screen '>
       {!isEducatorRoute && <Navbar />}
+      <Suspense fallback={<Loading />}>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path='/course-list' element={<CourseList />} />
@@ -55,12 +59,12 @@ const App = () => {
           <Route path='quiz/grade/:attemptId' element={<GradeQuiz />} />
           <Route path='students-enrolled' element={<StudentsEnrolled />} />
           <Route path='students-enrolled/:courseId' element={<StudentsEnrolled />} />
-          <Route path='student-enrolled' element={<StudentsEnrolled />} />
-          <Route path='student-enrolled/:courseId' element={<StudentsEnrolled />} />
         </Route>
       </Routes>
+      </Suspense>
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
     </div>
+    </ErrorBoundary>
   );
 }
 export default App

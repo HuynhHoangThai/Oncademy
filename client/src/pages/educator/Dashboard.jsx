@@ -1,80 +1,54 @@
 
-import { useContext, useEffect, useState, useCallback } from 'react'
+import { useContext } from 'react'
 import { AppContext } from '../../context/AppContext'
 import Loading from '../../components/students/Loading';
 import { assets } from '../../assets/assets';
-import axios from 'axios';
-import { useAuth } from '@clerk/clerk-react';
+import { useDashboard } from '../../hooks/useDashboard';
+import { DashboardSkeleton } from '../../components/students/SkeletonLoader';
 import { toast } from 'react-toastify';
+import { useQueryClient } from '@tanstack/react-query';
 
 const Dashboard = () => {
-  const { currency, backendUrl } = useContext(AppContext);
-  const { getToken } = useAuth();
-  const [dashboardData, setDashboardData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const { currency } = useContext(AppContext);
+  const queryClient = useQueryClient();
+  const { data, isLoading, error, refetch, isFetching } = useDashboard();
 
-  const fetchDashboardData = useCallback(async (showToast = false) => {
-    try {
-      if (showToast) setRefreshing(true);
-      else setLoading(true);
-      
-      const token = await getToken();
-      
-      const { data } = await axios.get(`${backendUrl}/api/educator/dashboard`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (data.success) {
-        setDashboardData(data.dashboardData);
-        if (showToast) {
-          toast.success('Dashboard refreshed successfully');
-        }
-      } else {
-        toast.error(data.message || 'Failed to load dashboard');
-      }
-    } catch (error) {
-      console.error('Dashboard fetch error:', error);
-      toast.error(error.response?.data?.message || 'Failed to load dashboard data');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [backendUrl, getToken]);
-
-  useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
-
-  // Auto refresh every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchDashboardData();
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(interval);
-  }, [fetchDashboardData]);
+  const dashboardData = data?.dashboardData;
 
   const handleManualRefresh = async () => {
+    await refetch();
+    toast.success('Dashboard refreshed successfully');
+  };
+
+  const handleSync = async () => {
     try {
-      setRefreshing(true);
-      const token = await getToken();
-      
-      // Force sync dashboard data from database
-      await axios.post(`${backendUrl}/api/educator/dashboard/sync`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      // Then fetch updated data
-      await fetchDashboardData(true);
+      // TODO: Add sync endpoint call if needed
+      await refetch();
+      toast.success('Dashboard synced successfully');
     } catch (error) {
-      console.error('Manual refresh error:', error);
-      toast.error('Failed to refresh dashboard');
-      setRefreshing(false);
+      toast.error('Failed to sync dashboard');
     }
   };
 
-  return !loading && dashboardData ? (
+  if (isLoading) return <DashboardSkeleton />;
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">Error loading dashboard: {error.message}</p>
+          <button
+            onClick={() => refetch()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+  if (!dashboardData) return <DashboardSkeleton />;
+
+  return (
     <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 to-white flex flex-col items-center py-10 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-7xl flex flex-col gap-10">
         {/* Header with Refresh Button */}
@@ -83,15 +57,15 @@ const Dashboard = () => {
           <div className="flex gap-2 w-full sm:w-auto">
             <button
               onClick={handleManualRefresh}
-              disabled={refreshing}
+              disabled={isFetching}
               className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all w-full sm:w-auto ${
-                refreshing 
+                isFetching 
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
                   : 'bg-blue-500 text-white hover:bg-blue-600 active:scale-95'
               }`}
             >
               <svg 
-                className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} 
+                className={`w-5 h-5 ${isFetching ? 'animate-spin' : ''}`} 
                 fill="none" 
                 stroke="currentColor" 
                 viewBox="0 0 24 24"
@@ -103,7 +77,7 @@ const Dashboard = () => {
                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
                 />
               </svg>
-              {refreshing ? 'Syncing...' : 'Sync Now'}
+              {isFetching ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
         </div>
@@ -326,7 +300,7 @@ const Dashboard = () => {
         )}
       </div>
     </div>
-  ) : <Loading />
+  );
 }
 
 export default Dashboard

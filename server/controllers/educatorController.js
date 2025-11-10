@@ -4,11 +4,15 @@ import { Purchase } from '../models/Purchase.js'
 import User from '../models/User.js'
 import { v2 as cloudinary } from 'cloudinary'
 import { getEducatorDashboard, syncEducatorDashboard } from '../utils/dashboardHelper.js'
+import { getUserId } from '../utils/authHelper.js'
+
 export const updateRoleToEducator = async (req, res) => {
-
     try {
-
-    const userId = typeof req.auth === 'function' ? req.auth().userId : req.auth.userId
+        const userId = getUserId(req);
+        
+        if (!userId) {
+            return res.json({ success: false, message: 'Unauthorized - No userId' });
+        }
 
         await clerkClient.users.updateUserMetadata(userId, {
             publicMetadata: {
@@ -32,9 +36,13 @@ export const addCourse = async (req, res) => {
 
     const imageFile = req.file
 
-    const educatorId = typeof req.auth === 'function' ? req.auth().userId : req.auth.userId
+    const educatorId = getUserId(req);
+    
+    if (!educatorId) {
+        return res.json({ success: false, message: 'Unauthorized - No userId' });
+    }
 
-        if (!imageFile) {
+    if (!imageFile) {
             return res.json({ success: false, message: 'Thumbnail Not Attached' })
         }
 
@@ -74,23 +82,68 @@ export const addCourse = async (req, res) => {
 // Get Educator Courses
 export const getEducatorCourses = async (req, res) => {
     try {
-        const educator = typeof req.auth === 'function' ? req.auth().userId : req.auth.userId
+        const educator = getUserId(req);
+        
+        if (!educator) {
+            return res.json({ success: false, message: 'Unauthorized - No userId' });
+        }
+        
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 12;
+        const skip = (page - 1) * limit;
 
-        const courses = await Course.find({ educator })
+        const total = await Course.countDocuments({ educator });
 
-        // Add quiz count to each course
-        const { default: Quiz } = await import('../models/Quiz.js');
-        const coursesWithQuizCount = await Promise.all(
-            courses.map(async (course) => {
-                const quizCount = await Quiz.countDocuments({ courseId: course._id });
-                return {
-                    ...course.toObject(),
-                    quizCount
-                };
-            })
-        );
+        // Use aggregation pipeline for better performance
+        const coursesWithEducator = await Course.aggregate([
+            { $match: { educator } },
+            {
+                $lookup: {
+                    from: 'quizzes',
+                    localField: '_id',
+                    foreignField: 'courseId',
+                    as: 'quizzes'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'educator',
+                    foreignField: '_id',
+                    as: 'educatorInfo'
+                }
+            },
+            {
+                $addFields: {
+                    quizCount: { $size: '$quizzes' },
+                    educator: { $arrayElemAt: ['$educatorInfo', 0] }
+                }
+            },
+            {
+                $project: {
+                    quizzes: 0,
+                    educatorInfo: 0,
+                    'educator.password': 0,
+                    'educator.enrolledCourses': 0
+                }
+            },
+            { $sort: { createdAt: -1 } },
+            { $skip: skip },
+            { $limit: limit }
+        ]);
 
-        res.json({ success: true, courses: coursesWithQuizCount })
+        res.json({
+            success: true,
+            courses: coursesWithEducator,
+            pagination: {
+                page,
+                limit,
+                total,
+                pages: Math.ceil(total / limit),
+                hasNext: page < Math.ceil(total / limit),
+                hasPrev: page > 1
+            }
+        });
 
     } catch (error) {
         res.json({ success: false, message: error.message })
@@ -99,7 +152,11 @@ export const getEducatorCourses = async (req, res) => {
 
 export const educatorDashboardData = async (req, res) => {
     try {
-        const educator = typeof req.auth === 'function' ? req.auth().userId : req.auth.userId;
+        const educator = getUserId(req);
+        
+        if (!educator) {
+            return res.json({ success: false, message: 'Unauthorized - No userId' });
+        }
 
         // Fetch from Dashboard model (which inherits data from Course, Purchase, User tables)
         const dashboard = await getEducatorDashboard(educator);
@@ -146,7 +203,11 @@ export const educatorDashboardData = async (req, res) => {
 // Force sync dashboard data
 export const forceSyncDashboard = async (req, res) => {
     try {
-        const educator = typeof req.auth === 'function' ? req.auth().userId : req.auth.userId;
+        const educator = getUserId(req);
+        
+        if (!educator) {
+            return res.json({ success: false, message: 'Unauthorized - No userId' });
+        }
 
         const dashboard = await syncEducatorDashboard(educator);
 
@@ -174,7 +235,11 @@ export const forceSyncDashboard = async (req, res) => {
 // DEBUG: Check all purchases for educator
 export const debugPurchases = async (req, res) => {
     try {
-        const educator = typeof req.auth === 'function' ? req.auth().userId : req.auth.userId;
+        const educator = getUserId(req);
+        
+        if (!educator) {
+            return res.json({ success: false, message: 'Unauthorized - No userId' });
+        }
 
         const courses = await Course.find({ educator });
         const courseIds = courses.map(c => c._id);
@@ -218,7 +283,11 @@ export const debugPurchases = async (req, res) => {
 };
 export const getEnrolledStudentsData = async (req, res) => {
     try {
-        const educator = typeof req.auth === 'function' ? req.auth().userId : req.auth.userId;
+        const educator = getUserId(req);
+        
+        if (!educator) {
+            return res.json({ success: false, message: 'Unauthorized - No userId' });
+        }
 
         // Fetch all courses created by the educator
         const courses = await Course.find({ educator });

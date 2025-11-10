@@ -2,6 +2,7 @@ import Quiz from '../models/Quiz.js';
 import QuizAttempt from '../models/QuizAttempt.js';
 import Course from '../models/Course.js';
 import * as XLSX from 'xlsx';
+import { getUserId } from '../utils/authHelper.js';
 
 // Generate unique ID
 const generateId = () => {
@@ -11,12 +12,9 @@ const generateId = () => {
 // Create quiz manually
 const createQuiz = async (req, res) => {
   try {
-    console.log('📝 createQuiz - req.body:', req.body);
-    console.log('📝 createQuiz - req.userId:', req.userId);
-
     const { courseId, chapterId, lectureId, questions, ...quizSettings } = req.body;
-    const educatorId = req.userId;
-
+    const educatorId = req.userId || getUserId(req);
+    
     if (!educatorId) {
       return res.json({ success: false, message: 'User ID not found' });
     }
@@ -102,15 +100,12 @@ const createQuiz = async (req, res) => {
 
     await quiz.save();
 
-    console.log('✅ Quiz saved:', quiz._id);
-
     res.json({
       success: true,
       message: 'Quiz created successfully',
       quiz
     });
   } catch (error) {
-    console.error('❌ Create quiz error:', error);
     res.json({ success: false, message: error.message });
   }
 };
@@ -304,7 +299,11 @@ const getPublishedQuizzes = async (req, res) => {
 const getQuizForTaking = async (req, res) => {
   try {
     const { quizId } = req.params;
-    const userId = typeof req.auth === 'function' ? req.auth().userId : req.auth.userId;
+    const userId = getUserId(req);
+    
+    if (!userId) {
+      return res.json({ success: false, message: 'User not authenticated' });
+    }
 
     const quiz = await Quiz.findById(quizId)
       .select('-questions.correctAnswer -questions.correctAnswers -questions.options.isCorrect');
@@ -350,7 +349,11 @@ const submitQuizAttempt = async (req, res) => {
   try {
     const { quizId } = req.params;
     const { answers } = req.body;
-    const userId = typeof req.auth === 'function' ? req.auth().userId : req.auth.userId;
+    const userId = getUserId(req);
+    
+    if (!userId) {
+      return res.json({ success: false, message: 'User not authenticated' });
+    }
 
     const quiz = await Quiz.findById(quizId);
     if (!quiz || !quiz.isPublished) {
@@ -739,7 +742,7 @@ const downloadExcelTemplate = async (req, res) => {
 const getQuizAttempt = async (req, res) => {
   try {
     const { attemptId } = req.params;
-    const studentId = req.auth?.userId;
+    const studentId = getUserId(req);
 
     if (!studentId) {
       return res.json({ success: false, message: 'User not authenticated' });

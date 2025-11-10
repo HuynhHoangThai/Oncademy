@@ -9,6 +9,7 @@ import YouTube from 'react-youtube';
 import axios from 'axios';
 import { useAuth, useUser } from '@clerk/clerk-react';
 import { toast } from 'react-toastify';
+import { useCourse } from '../../hooks/useCourses';
 
 const CourseDetailPage = () => {
 const {id} = useParams();
@@ -24,7 +25,7 @@ const { user } = useUser();
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 
-const {allCourses,calculateChapterTime,
+const {calculateChapterTime,
         calculateCourseDuration,
         calculateNoOfLectures,
         calculateRating,
@@ -54,31 +55,24 @@ const {allCourses,calculateChapterTime,
     return null;
   };
   
+  // Fetch course data using React Query
+  const { data: courseResponse, isLoading: courseLoading } = useCourse(id);
+  
   useEffect(() => {
-    const findCourse = allCourses.find(course => course._id === id);
-    setCourseData(findCourse);
-    if (id) {
-      addToViewHistory(id);
+    if (courseResponse?.courseData) {
+      setCourseData(courseResponse.courseData);
+      if (id) {
+        addToViewHistory(id);
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, allCourses]);
+  }, [courseResponse, id, addToViewHistory]);
 
-  useEffect(() => {
-    console.log('Rating update trigger changed:', ratingUpdateTrigger);
-  }, [ratingUpdateTrigger]);
-   const toggleSection = (index) => {
+  const toggleSection = (index) => {
     setOpenSections((prev) => ({
       ...prev,
       [index]: !prev[index],
     }));
   };
-
-  useEffect(() => {
-    console.log('CourseDetailPage mounted');
-    return () => {
-      console.log('CourseDetailPage unmounted');
-    };
-  }, []);
 
   const handleEnrollNow = async () => {
     try {
@@ -111,7 +105,10 @@ const {allCourses,calculateChapterTime,
     }
   };
 
-  return courseData ? (
+  if (courseLoading) return <Loading />;
+  if (!courseData) return <Loading />;
+
+  return (
     <>
     <div className="flex md:flex-row flex-col-reverse gap-8 md:gap-12 relative items-start justify-center md:px-36 px-8 md:pt-20 pt-10 text-left bg-gradient-to-b from-cyan-100/40 to-white pb-12">
         {/*left*/}
@@ -217,6 +214,7 @@ const {allCourses,calculateChapterTime,
                   src={courseData.courseThumbnail} 
                   alt={courseData.courseTitle}
                   className="w-full aspect-video object-cover"
+                  loading="lazy"
                 />
               )}
               
@@ -311,7 +309,7 @@ const {allCourses,calculateChapterTime,
     </div>
     <Footer />
     </>
-  ) : <Loading/>
+  );
 };
 
 export default CourseDetailPage

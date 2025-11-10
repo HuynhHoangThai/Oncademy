@@ -94,9 +94,25 @@ const MyCourses = () => {
     
     loadData()
     
-    // Auto-refresh mỗi 30 giây
-    const interval = setInterval(loadData, 30000)
-    return () => clearInterval(interval)
+    // Auto-refresh khi tab visible và mỗi 5 phút
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadData()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        loadData()
+      }
+    }, 5 * 60 * 1000) // 5 minutes
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      clearInterval(interval)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

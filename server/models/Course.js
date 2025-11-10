@@ -43,6 +43,12 @@ const courseSchema = new mongoose.Schema({
     ],
 }, { timestamps: true, minimize: false });
 
+// Add indexes for better query performance
+courseSchema.index({ isPublished: 1, createdAt: -1 });
+courseSchema.index({ educator: 1 });
+courseSchema.index({ 'courseRatings.userId': 1 });
+courseSchema.index({ enrolledStudents: 1 });
+
 const Course = mongoose.model('Course', courseSchema);
 
 export default Course;

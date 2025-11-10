@@ -3,24 +3,33 @@ import {Purchase} from '../models/Purchase.js'
 import User from '../models/User.js'
 import {CourseProgress} from '../models/CourseProgress.js'
 import stripe from 'stripe'
+import { getUserId } from '../utils/authHelper.js'
 
 export const getUserData = async (req, res) => {
-
     try {
-        const userId = req.auth().userId ? req.auth().userId : (typeof req.auth === 'function' ? req.auth().userId : undefined);
-        const user = await User.findById(userId)
-        if (!user) {
-            return res.json({ success: false, message: 'User Not Found' })
+        const userId = getUserId(req);
+        
+        if (!userId) {
+            return res.json({ success: false, message: 'User not authenticated' });
         }
-        res.json({ success: true, user })
+        
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.json({ success: false, message: 'User Not Found' });
+        }
+        res.json({ success: true, user });
     } catch (error) {
-        res.json({ success: false, message: error.message })
+        res.json({ success: false, message: error.message });
     }
 }
-export const userEnrolledCourses = async (req, res) => {
 
+export const userEnrolledCourses = async (req, res) => {
     try {
-        const userId = req.auth().userId ? req.auth().userId : (typeof req.auth === 'function' ? req.auth().userId : undefined);
+        const userId = getUserId(req);
+        
+        if (!userId) {
+            return res.json({ success: false, message: 'User not authenticated' });
+        }
         const userData = await User.findById(userId).populate('enrolledCourses')
         if (!userData) {
             return res.json({ success: false, message: 'User Not Found' })
@@ -67,7 +76,11 @@ export const purchaseCourse = async (req, res) => {
     try {
         const { courseId } = req.body
         const { origin } = req.headers
-        const userId = typeof req.auth === 'function' ? req.auth().userId : req.auth.userId
+        const userId = getUserId(req);
+        
+        if (!userId) {
+            return res.json({ success: false, message: 'User not authenticated' });
+        }
         
         if (!courseId) {
             return res.json({ success: false, message: 'Course ID is required' })
@@ -125,12 +138,14 @@ export const purchaseCourse = async (req, res) => {
 
 
 export const updateUserCourseProgress = async (req, res) => {
-
     try {
+        const userId = getUserId(req);
+        
+        if (!userId) {
+            return res.json({ success: false, message: 'User not authenticated' });
+        }
 
-        const userId = typeof req.auth === 'function' ? req.auth().userId : req.auth.userId
-
-        const { courseId, lectureId } = req.body
+        const { courseId, lectureId } = req.body;
 
         if (!courseId || !lectureId) {
             return res.json({ success: false, message: 'Course ID and Lecture ID are required' })
@@ -194,12 +209,14 @@ export const updateUserCourseProgress = async (req, res) => {
     }
 }
 export const getUserCourseProgress = async (req, res) => {
-
     try {
+        const userId = getUserId(req);
+        
+        if (!userId) {
+            return res.json({ success: false, message: 'User not authenticated' });
+        }
 
-        const userId = typeof req.auth === 'function' ? req.auth().userId : req.auth.userId
-
-        const { courseId } = req.body
+        const { courseId } = req.body;
 
         const progressData = await CourseProgress.findOne({ userId, courseId })
 
@@ -212,16 +229,19 @@ export const getUserCourseProgress = async (req, res) => {
 }
 
 export const addUserRating = async (req, res) => {
-
-    const userId = typeof req.auth === 'function' ? req.auth().userId : req.auth.userId;
-    const { courseId, rating } = req.body;
-
-    // Validate inputs
-    if (!courseId || !userId || !rating || rating < 1 || rating > 5) {
-        return res.json({ success: false, message: 'InValid Details' });
-    }
-
     try {
+        const userId = getUserId(req);
+        
+        if (!userId) {
+            return res.json({ success: false, message: 'User not authenticated' });
+        }
+        
+        const { courseId, rating } = req.body;
+
+        // Validate inputs
+        if (!courseId || !rating || rating < 1 || rating > 5) {
+            return res.json({ success: false, message: 'Invalid Details' });
+        }
         // Find the course by ID
         const course = await Course.findById(courseId);
 

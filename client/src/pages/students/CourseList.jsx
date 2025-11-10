@@ -1,59 +1,68 @@
 
-import {useContext } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AppContext } from '../../context/AppContext'
 import SearchBar from '../../components/students/SearchBar'
 import CourseCard from '../../components/students/CourseCard'
-import { useState, useEffect } from 'react'
 import { assets } from '../../assets/assets'
 import Footer from '../../components/students/Footer'
+import { useCourses } from '../../hooks/useCourses'
+import { CourseListSkeleton } from '../../components/students/SkeletonLoader'
+import { useDebounce } from '../../hooks/useDebounce'
+
 const CourseList = () => {
-  const { allCourses } = useContext(AppContext)
   const { input } = useParams()
   const navigate = useNavigate()
-  const [filteredCourse, setFilteredCourse] = useState([])
+  const [page, setPage] = useState(1)
   const [priceRange, setPriceRange] = useState({ min: 0, max: 1000 })
   const [actualPriceRange, setActualPriceRange] = useState({ min: 0, max: 1000 })
   const [showPriceFilter, setShowPriceFilter] = useState(false)
   
-  // Calculate actual price range from courses
+  // Debounce search input
+  const debouncedSearch = useDebounce(input || '', 300)
+  
+  // Fetch courses with React Query
+  const { data, isLoading, error, isFetching } = useCourses({
+    page,
+    limit: 12,
+    search: debouncedSearch,
+    sort: 'createdAt',
+    order: 'desc'
+  })
+
+  const courses = data?.courses || []
+  const pagination = data?.pagination
+
+  // Calculate price range from all courses (need to fetch all for this)
   useEffect(() => {
-    if (allCourses && allCourses.length > 0) {
-      const prices = allCourses.map(course => 
+    if (courses.length > 0) {
+      const prices = courses.map(course => 
         course.coursePrice - (course.discount * course.coursePrice / 100)
       )
-      const minPrice = Math.floor(Math.min(...prices))
-      const maxPrice = Math.ceil(Math.max(...prices))
+      const minPrice = Math.floor(Math.min(...prices, actualPriceRange.min || 0))
+      const maxPrice = Math.ceil(Math.max(...prices, actualPriceRange.max || 1000))
       
-      setActualPriceRange({ min: minPrice, max: maxPrice })
-      
-      // Set initial price range to actual range if not set yet
-      if (priceRange.min === 0 && priceRange.max === 1000) {
-        setPriceRange({ min: minPrice, max: maxPrice })
+      if (minPrice !== actualPriceRange.min || maxPrice !== actualPriceRange.max) {
+        setActualPriceRange({ min: minPrice, max: maxPrice })
+        if (priceRange.min === 0 && priceRange.max === 1000) {
+          setPriceRange({ min: minPrice, max: maxPrice })
+        }
       }
     }
-  }, [allCourses, priceRange.min, priceRange.max])
-  
+  }, [courses])
+
+  // Filter courses by price range (client-side)
+  const filteredCourses = useMemo(() => {
+    return courses.filter(course => {
+      const finalPrice = course.coursePrice - (course.discount * course.coursePrice / 100)
+      return finalPrice >= priceRange.min && finalPrice <= priceRange.max
+    })
+  }, [courses, priceRange])
+
+  // Reset page when search changes
   useEffect(() => {
-     if (allCourses && allCourses.length > 0) {
-            let tempCourses = allCourses.slice()
-
-            // Filter by search input
-            if (input) {
-                tempCourses = tempCourses.filter(
-                    item => item.courseTitle.toLowerCase().includes(input.toLowerCase())
-                )
-            }
-
-            // Filter by price range
-            tempCourses = tempCourses.filter(course => {
-                const finalPrice = course.coursePrice - (course.discount * course.coursePrice / 100)
-                return finalPrice >= priceRange.min && finalPrice <= priceRange.max
-            })
-
-            setFilteredCourse(tempCourses)
-        }
-  },[allCourses, input, priceRange])
+    setPage(1)
+  }, [debouncedSearch])
   
   
   return (
@@ -113,9 +122,11 @@ const CourseList = () => {
                 <p className="text-sm font-medium text-blue-600">
                   Selected: ${priceRange.min} - ${priceRange.max}
                 </p>
-                <p className="text-xs text-gray-500">
-                  {filteredCourse.length} courses found
-                </p>
+                {courses.length > 0 && (
+                  <p className="text-xs text-gray-500">
+                    {filteredCourses.length} courses found
+                  </p>
+                )}
               </div>
             </div>
 
@@ -201,18 +212,61 @@ const CourseList = () => {
         )}
       </div>
       <div className="mt-8">
-        {allCourses && allCourses.length > 0 ? (
+        {isLoading ? (
+          <CourseListSkeleton />
+        ) : error ? (
+          <div className="text-center py-8">
+            <p className="text-red-500">Error loading courses: {error.message}</p>
+          </div>
+        ) : filteredCourses.length > 0 ? (
           <>
-            <div className="mb-4 text-sm text-gray-600">
-              Showing {filteredCourse.length} of {allCourses.length} courses
+            <div className="mb-4 flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                Showing {filteredCourses.length} of {pagination?.total || 0} courses
+                {debouncedSearch && <span> for "{debouncedSearch}"</span>}
+              </div>
+              {isFetching && <div className="text-sm text-gray-500">Loading...</div>}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredCourse.map((course, index) => <CourseCard key={index} course={course} />)}
+              {filteredCourses.map((course) => (
+                <CourseCard key={course._id} course={course} />
+              ))}
             </div>
+            
+            {/* Pagination */}
+            {pagination && pagination.pages > 1 && (
+              <div className="mt-8 flex items-center justify-center gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={!pagination.hasPrev || isFetching}
+                  className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Previous
+                </button>
+                <span className="px-4 py-2 text-gray-600">
+                  Page {pagination.page} of {pagination.pages}
+                </span>
+                <button
+                  onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
+                  disabled={!pagination.hasNext || isFetching}
+                  className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </>
         ) : (
           <div className="text-center py-8">
-            <p className="text-gray-500">No courses available</p>
+            <p className="text-gray-500">No courses found</p>
+            {debouncedSearch && (
+              <button
+                onClick={() => navigate('/course-list')}
+                className="mt-4 text-blue-600 hover:underline"
+              >
+                Clear search
+              </button>
+            )}
           </div>
         )}
       </div>

@@ -169,6 +169,12 @@ quizSchema.pre('save', function(next) {
   next();
 });
 
+// Add indexes for better query performance
+quizSchema.index({ courseId: 1, isPublished: 1 });
+quizSchema.index({ createdBy: 1 });
+quizSchema.index({ courseId: 1, chapterId: 1 });
+quizSchema.index({ courseId: 1, lectureId: 1 });
+
 const Quiz = mongoose.model('Quiz', quizSchema);
 
 export default Quiz;

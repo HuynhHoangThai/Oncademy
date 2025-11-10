@@ -15,7 +15,12 @@ const app = express();
 await connectDB();
 await connectCloudinary()
 //Middleware
-app.use(cors());
+const corsOptions = {
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'],
+    credentials: true,
+    optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
 app.use(clerkMiddleware());
 //Routes
 app.get('/', (req, res) => res.send('API is running...'));

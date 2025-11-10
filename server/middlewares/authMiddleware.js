@@ -1,40 +1,35 @@
 import { clerkClient } from "@clerk/express"
+import { getUserId } from "../utils/authHelper.js"
 
 // Middleware ( Protect Educator Routes )
-export const protectEducator = async (req,res,next) => {
-
+export const protectEducator = async (req, res, next) => {
     try {
-
-    const userId = typeof req.auth === 'function' ? req.auth().userId : req.auth.userId
-        
-        console.log('🔍 protectEducator Debug:');
-        console.log('req.auth type:', typeof req.auth);
-        console.log('userId:', userId);
+        const userId = getUserId(req);
 
         if (!userId) {
-            console.log('❌ No userId found');
-            return res.json({success:false, message: 'Unauthorized Access - No userId'})
+            return res.status(401).json({
+                success: false,
+                message: 'Unauthorized Access - No userId'
+            });
         }
 
-        const response = await clerkClient.users.getUser(userId)
-        console.log('User data:', response);
-        console.log('publicMetadata:', response.publicMetadata);
-        console.log('role:', response.publicMetadata.role);
+        const response = await clerkClient.users.getUser(userId);
 
         if (response.publicMetadata.role !== 'educator') {
-            console.log('❌ Role mismatch:', response.publicMetadata.role, '!== educator');
-            return res.json({success:false, message: 'Unauthorized Access - Not an educator'})
+            return res.status(403).json({
+                success: false,
+                message: 'Unauthorized Access - Not an educator'
+            });
         }
-        
+
         // Set userId for downstream controllers
         req.userId = userId;
-        
-        console.log('✅ Educator verified, userId set to:', req.userId);
-        next ()
-
+        next();
     } catch (error) {
-        console.error('❌ protectEducator error:', error);
-        res.json({success:false, message: error.message})
+        console.error('protectEducator error:', error.message);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
     }
-
-}
+};
