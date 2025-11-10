@@ -6,6 +6,10 @@ import { assets } from '../../assets/assets';
 import humanizeDuration from 'humanize-duration'
 import Footer from '../../components/students/Footer';
 import YouTube from 'react-youtube';
+import axios from 'axios';
+import { useAuth, useUser } from '@clerk/clerk-react';
+import { toast } from 'react-toastify';
+
 const CourseDetailPage = () => {
 const {id} = useParams();
 
@@ -14,6 +18,10 @@ const [openSections, setOpenSections] = useState({});
 const [playerData, setPlayerData] = useState(null);
 const {currency} = useContext(AppContext);
 const [_isAlreadyEnrolled, _setIsAlreadyEnrolled] = useState(false)
+const [isPurchasing, setIsPurchasing] = useState(false);
+const { getToken } = useAuth();
+const { user } = useUser();
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 
 const {allCourses,calculateChapterTime,
@@ -25,6 +33,26 @@ const {allCourses,calculateChapterTime,
         toggleFavoriteCourse,
         isCourseFavorite,
         addToViewHistory} = useContext(AppContext);
+
+  // Extract YouTube video ID from URL
+  const getYouTubeVideoId = (url) => {
+    if (!url) return null;
+    
+    // Handle different YouTube URL formats
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+      /^([a-zA-Z0-9_-]{11})$/ // Direct video ID
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+    
+    return null;
+  };
   
   useEffect(() => {
     const findCourse = allCourses.find(course => course._id === id);
@@ -51,6 +79,37 @@ const {allCourses,calculateChapterTime,
       console.log('CourseDetailPage unmounted');
     };
   }, []);
+
+  const handleEnrollNow = async () => {
+    try {
+      if (!user) {
+        toast.error('Please sign in to enroll in this course');
+        return;
+      }
+
+      setIsPurchasing(true);
+
+      const token = await getToken();
+      
+      const { data } = await axios.post(
+        `${backendUrl}/api/user/purchase`,
+        { courseId: courseData._id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (data.success && data.sessionUrl) {
+        // Redirect to Stripe checkout page
+        window.location.href = data.sessionUrl;
+      } else {
+        toast.error(data.message || 'Failed to create checkout session');
+        setIsPurchasing(false);
+      }
+    } catch (error) {
+      console.error('Purchase error:', error);
+      toast.error(error?.response?.data?.message || error.message || 'Failed to start checkout');
+      setIsPurchasing(false);
+    }
+  };
 
   return courseData ? (
     <>
@@ -117,7 +176,7 @@ const {allCourses,calculateChapterTime,
                             <p>{lecture.lectureTitle}</p>
                             <div className='flex gap-2'>
                               {lecture.isPreviewFree && <p onClick={() => setPlayerData({
-                                videoId: lecture.lectureUrl.split('/').pop()
+                                videoId: getYouTubeVideoId(lecture.lectureUrl)
                               })} className='text-blue-500 cursor-pointer'>Preview</p>}
                               <p>{humanizeDuration(lecture.lectureDuration * 60 * 1000, { units: ['h', 'm'] })}</p>
                             </div>
@@ -141,10 +200,16 @@ const {allCourses,calculateChapterTime,
           <div className="w-full max-w-sm mx-auto">
             {/* Video/Image Container */}
             <div className="relative bg-white rounded-lg shadow-lg overflow-hidden">
-              {playerData ? (
+              {playerData && playerData.videoId ? (
                 <YouTube 
                   videoId={playerData.videoId} 
-                  opts={{ playerVars: { autoplay: 1 } }} 
+                  opts={{ 
+                    playerVars: { 
+                      autoplay: 1,
+                      modestbranding: 1,
+                      rel: 0
+                    } 
+                  }} 
                   iframeClassName='w-full aspect-video' 
                 />
               ) : (
@@ -196,8 +261,18 @@ const {allCourses,calculateChapterTime,
               </div>
 
               {/* Enroll Button */}
-              <button className="w-full py-3 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors shadow-md">
-                {_isAlreadyEnrolled ? "Already Enrolled" : "Enroll Now"}
+              <button 
+                onClick={handleEnrollNow}
+                disabled={isPurchasing || _isAlreadyEnrolled}
+                className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors shadow-md ${
+                  isPurchasing 
+                    ? 'bg-gray-400 cursor-not-allowed text-white'
+                    : _isAlreadyEnrolled
+                      ? 'bg-green-600 cursor-not-allowed text-white'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+              >
+                {isPurchasing ? 'Processing...' : _isAlreadyEnrolled ? 'Already Enrolled' : 'Enroll Now'}
               </button>
 
               {/* Course Features */}

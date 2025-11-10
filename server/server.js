@@ -8,11 +8,12 @@ import { clerkMiddleware } from '@clerk/express';
 import connectCloudinary from './configs/cloundinary.js';
 import courseRouter from './routes/courseRoute.js';
 import userRouter from './routes/userRoutes.js';
+import quizRouter from './routes/quizRoutes.js';
 //Initialize Express
 const app = express();
 //Connecet to MongoDB
 await connectDB();
-await connectCloudinary
+await connectCloudinary()
 //Middleware
 app.use(cors());
 app.use(clerkMiddleware());
@@ -22,6 +23,7 @@ app.post('/clerk', express.json() , clerkWebhooks)
 app.use('/api/educator', express.json(), educatorRouter);
 app.use('/api/course', express.json(), courseRouter)
 app.use('/api/user', express.json(), userRouter);
+app.use('/api/quiz', express.json(), quizRouter);
 app.post('/stripe',express.raw({type: 'application/json'}),  stripeWebhooks)
 //Port
 const PORT = process.env.PORT || 5000;

@@ -3,6 +3,10 @@ import Uniqid from 'uniqid'
 import Quill from 'quill'
 import 'quill/dist/quill.snow.css';
 import { assets } from '../../assets/assets'
+import axios from 'axios'
+import { useAuth } from '@clerk/clerk-react'
+import { toast } from 'react-toastify'
+import { useNavigate } from 'react-router-dom'
 
 const AddCourse = () => {
   const quillRef = useRef(null);
@@ -22,6 +26,8 @@ const AddCourse = () => {
     isPreviewFree: false,
   })
   const [courseDescription, setCourseDescription] = useState('');
+  const { getToken } = useAuth();
+  const navigate = useNavigate();
   const handleChapter = (action, chapterId) => {
     if (action === 'add') {
       const title = prompt('Enter Chapter Name:');
@@ -84,15 +90,49 @@ const AddCourse = () => {
   };
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const courseData = {
-      title: courseTitle,
-      description: courseDescription,
-      price: coursePrice,
-      discount,
-      image,
-      chapters,
-    };
-    console.log('Submitting course:', courseData);
+    try {
+      if (!courseTitle) return toast.error('Please provide a course title')
+      const token = await getToken()
+
+      const payload = {
+        courseTitle,
+        courseDescription,
+        coursePrice: Number(coursePrice) || 0,
+        discount: Number(discount) || 0,
+        courseContent: chapters || []
+      }
+
+      const form = new FormData()
+      form.append('courseData', JSON.stringify(payload))
+      if (image) form.append('image', image)
+
+      const backendUrl = import.meta.env.VITE_BACKEND_URL
+
+      const { data } = await axios.post(backendUrl + '/api/educator/add-course', form, {
+        headers: {
+          Authorization: `Bearer ${token}`
+          // Note: let browser set Content-Type with boundary
+        }
+      })
+
+      if (data.success) {
+        toast.success('Course created successfully')
+        // reset form
+        setCourseTitle('')
+        setCourseDescription('')
+        setCoursePrice(0)
+        setDiscount(0)
+        setImage(null)
+        setChapters([])
+        // optionally navigate to educator dashboard
+        navigate('/educator')
+      } else {
+        toast.error(data.message || 'Failed to create course')
+      }
+    } catch (err) {
+      console.error('AddCourse error', err)
+      toast.error(err?.response?.data?.message || err.message || 'Server error')
+    }
     
   }
  useEffect(() => {

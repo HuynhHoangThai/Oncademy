@@ -3,6 +3,7 @@ import User from "../models/User.js";
 import stripe from "stripe";
 import { Purchase } from "../models/Purchase.js";
 import Course from "../models/Course.js";
+import { syncEducatorDashboard } from "../utils/dashboardHelper.js";
 
 // API Controller Function to Manage Clerk User with database
 export const clerkWebhooks = async (req, res) => {
@@ -110,6 +111,12 @@ export const  stripeWebhooks = async (request, response) => {
       
       purchaseData.status = 'completed';
       await purchaseData.save();
+
+      // Sync educator dashboard after successful purchase
+      const educatorId = courseData.educator;
+      await syncEducatorDashboard(educatorId).catch(err => {
+        console.error('Dashboard sync error after purchase:', err);
+      });
 
       break;
     

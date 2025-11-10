@@ -277,6 +277,7 @@ const AppProvider = (props) => {
 
     const value = {
         currency,
+        backendUrl,
         allCourses, 
         caculateRating,
         calculateRating,

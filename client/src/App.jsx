@@ -9,12 +9,17 @@ import MyEnrollments from './pages/students/MyEnrollments'
 import Player from './pages/students/Player'
 import Favorites from './pages/students/Favorites'
 import ViewHistory from './pages/students/ViewHistory'
+import QuizTaking from './pages/students/QuizTaking'
+import QuizResult from './pages/students/QuizResult'
 
 // Educator pages
 import Educator from './pages/educator/Educator'
 import Dashboard from './pages/educator/Dashboard'
 import AddCourse from './pages/educator/AddCourse'
-
+import QuizManagement from './pages/educator/QuizManagement'
+import QuizBuilder from './pages/educator/QuizBuilder'
+import QuizSubmissions from './pages/educator/QuizSubmissions'
+import GradeQuiz from './pages/educator/GradeQuiz'
 import StudentsEnrolled from './pages/educator/StudentsEnrolled'
 import Navbar from './components/students/NavBar'
 import MyCourses from './pages/educator/MyCourses'
@@ -36,11 +41,18 @@ const App = () => {
         <Route path='/favorites' element={<Favorites />} />
         <Route path='/view-history' element={<ViewHistory />} />
         <Route path='/player/:courseId' element={<Player />} />
+        <Route path='/quiz/:quizId' element={<QuizTaking />} />
+        <Route path='/quiz/:quizId/result/:attemptId' element={<QuizResult />} />
         <Route path='/loading/:path' element={<Loading />} />
         <Route path='/educator' element={<Educator />}>
           <Route index element={<Dashboard />} />
           <Route path='add-course' element={<AddCourse />} />
           <Route path='my-courses' element={<MyCourses />} />
+          <Route path='quizzes' element={<QuizManagement />} />
+          <Route path='quiz/create/:courseId' element={<QuizBuilder />} />
+          <Route path='quiz/edit/:quizId' element={<QuizBuilder />} />
+          <Route path='quiz/submissions/:quizId' element={<QuizSubmissions />} />
+          <Route path='quiz/grade/:attemptId' element={<GradeQuiz />} />
           <Route path='students-enrolled' element={<StudentsEnrolled />} />
           <Route path='students-enrolled/:courseId' element={<StudentsEnrolled />} />
           <Route path='student-enrolled' element={<StudentsEnrolled />} />
