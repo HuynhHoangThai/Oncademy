@@ -18,6 +18,8 @@ const navigate = useNavigate();
 const [courseData,setCourseData] = useState(null);
 const [openSections, setOpenSections] = useState({});
 const [playerData, setPlayerData] = useState(null);
+const [playerInstance, setPlayerInstance] = useState(null);
+const [previewInterval, setPreviewInterval] = useState(null);
 const {currency} = useContext(AppContext);
 const [_isAlreadyEnrolled, _setIsAlreadyEnrolled] = useState(false)
 const [isPurchasing, setIsPurchasing] = useState(false);
@@ -75,6 +77,79 @@ const {calculateChapterTime,
       [index]: !prev[index],
     }));
   };
+
+  // Handle YouTube player ready
+  const onPlayerReady = (event) => {
+    const player = event.target;
+    setPlayerInstance(player);
+  };
+
+  // Handle YouTube player state change
+  const onPlayerStateChange = (event) => {
+    if (!playerInstance) return;
+
+    // Clear any existing interval
+    if (previewInterval) {
+      clearInterval(previewInterval);
+      setPreviewInterval(null);
+    }
+
+    if (event.data === window.YT.PlayerState.PLAYING) {
+      // Force video to start from beginning for preview
+      const currentTime = playerInstance.getCurrentTime();
+      if (currentTime > 60) {
+        playerInstance.seekTo(0, true);
+      }
+
+      // Check time every 500ms for smoother control
+      const interval = setInterval(() => {
+        const time = playerInstance.getCurrentTime();
+        
+        // If user tries to seek beyond 60 seconds, force back to start
+        if (time > 60) {
+          playerInstance.pauseVideo();
+          playerInstance.seekTo(0, true);
+          clearInterval(interval);
+          setPreviewInterval(null);
+          
+          // Show attractive modal-style toast
+          toast.warning(
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                <p className="font-semibold text-gray-900">Preview Time Ended</p>
+                <p className="text-sm text-gray-600 mt-1">Enroll now to unlock full access to this course and all its content!</p>
+              </div>
+            </div>,
+            {
+              autoClose: 6000,
+              closeButton: true,
+              position: 'top-center',
+              style: {
+                minWidth: '400px'
+              }
+            }
+          );
+        }
+      }, 500);
+
+      setPreviewInterval(interval);
+    } else if (event.data === window.YT.PlayerState.PAUSED || 
+               event.data === window.YT.PlayerState.ENDED) {
+      if (previewInterval) {
+        clearInterval(previewInterval);
+        setPreviewInterval(null);
+      }
+    }
+  };
+
+  // Cleanup interval when component unmounts or player changes
+  useEffect(() => {
+    return () => {
+      if (previewInterval) {
+        clearInterval(previewInterval);
+      }
+    };
+  }, [previewInterval]);
 
   const handleEnrollNow = async () => {
     try {
@@ -209,17 +284,42 @@ const {calculateChapterTime,
             {/* Video/Image Container */}
             <div className="relative bg-white rounded-lg shadow-lg overflow-hidden">
               {playerData && playerData.videoId ? (
-                <YouTube 
-                  videoId={playerData.videoId} 
-                  opts={{ 
-                    playerVars: { 
-                      autoplay: 1,
-                      modestbranding: 1,
-                      rel: 0
-                    } 
-                  }} 
-                  iframeClassName='w-full aspect-video' 
-                />
+                <div className="relative">
+                  <YouTube 
+                    videoId={playerData.videoId}
+                    onReady={onPlayerReady}
+                    onStateChange={onPlayerStateChange}
+                    opts={{ 
+                      playerVars: { 
+                        autoplay: 1,
+                        modestbranding: 1,
+                        rel: 0,
+                        start: 0,
+                        controls: 1,
+                        disablekb: 1,
+                        fs: 0,
+                        iv_load_policy: 3
+                      } 
+                    }} 
+                    iframeClassName='w-full aspect-video' 
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
+                    <div className="flex items-center justify-between text-white text-sm">
+                      <span className="flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                        Preview Mode 
+                      </span>
+                      <button
+                        onClick={() => setPlayerData(null)}
+                        className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded text-xs"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <img 
                   src={courseData.courseThumbnail} 

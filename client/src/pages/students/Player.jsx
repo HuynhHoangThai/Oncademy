@@ -278,7 +278,9 @@ const Player = () => {
                                     <div className="flex items-start justify-between gap-2">
                                       <div className="flex-1">
                                         <p className="font-medium text-gray-800 text-sm md:text-base">{quiz.quizTitle}</p>
-                                        <p className="text-xs text-gray-600 mt-1">{quiz.quizDescription}</p>
+                                        {quiz.quizDescription && quiz.quizDescription.trim() && (
+                                          <p className="text-xs text-gray-600 mt-1">{quiz.quizDescription}</p>
+                                        )}
                                         <div className="flex flex-wrap gap-2 mt-2">
                                           <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
                                             {quiz.questions?.length || 0} questions

@@ -23,6 +23,7 @@ const MyQuizResults = lazy(() => import('./pages/students/MyQuizResults'))
 const Educator = lazy(() => import('./pages/educator/Educator'))
 const Dashboard = lazy(() => import('./pages/educator/Dashboard'))
 const AddCourse = lazy(() => import('./pages/educator/AddCourse'))
+const EditCourse = lazy(() => import('./pages/educator/EditCourse'))
 const QuizManagement = lazy(() => import('./pages/educator/QuizManagement'))
 const QuizBuilder = lazy(() => import('./pages/educator/QuizBuilder'))
 const QuizSubmissions = lazy(() => import('./pages/educator/QuizSubmissions'))
@@ -53,6 +54,7 @@ const App = () => {
         <Route path='/educator' element={<Educator />}>
           <Route index element={<Dashboard />} />
           <Route path='add-course' element={<AddCourse />} />
+          <Route path='edit-course/:id' element={<EditCourse />} />
           <Route path='my-courses' element={<MyCourses />} />
           <Route path='quizzes' element={<QuizManagement />} />
           <Route path='quiz/create/:courseId' element={<QuizBuilder />} />

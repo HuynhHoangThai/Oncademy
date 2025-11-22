@@ -141,6 +141,7 @@ const uploadQuizFromExcel = async (req, res) => {
     const quizDescription = data[0].QuizDescription || '';
     const duration = parseInt(data[0].Duration) || 30;
     const passingScore = parseInt(data[0].PassingScore) || 70;
+    const quizType = data[0].QuizType?.toLowerCase() || 'quiz';
 
     const questions = [];
     let currentQuestionId = null;
@@ -150,8 +151,8 @@ const uploadQuizFromExcel = async (req, res) => {
       // Skip header info rows
       if (index === 0) return;
 
-      const questionType = row.QuestionType?.toLowerCase();
-      const questionText = row.Question;
+      const questionType = row.QuestionType?.toLowerCase()?.trim();
+      const questionText = row.Question?.trim();
       const points = parseInt(row.Points) || 1;
 
       if (questionText && questionType) {
@@ -160,8 +161,8 @@ const uploadQuizFromExcel = async (req, res) => {
           questions.push(currentQuestion);
         }
 
-        // Create new question
-        currentQuestionId = generateId();
+        // Create new question with unique ID
+        currentQuestionId = `q_${Date.now()}_${index}`;
         currentQuestion = {
           questionId: currentQuestionId,
           questionType,
@@ -169,50 +170,72 @@ const uploadQuizFromExcel = async (req, res) => {
           points,
           options: [],
           correctAnswers: [],
-          explanation: row.Explanation || ''
+          explanation: row.Explanation?.trim() || ''
         };
 
         // Handle different question types
         if (questionType === 'multiple-choice') {
-          const optionA = row.OptionA;
-          const optionB = row.OptionB;
-          const optionC = row.OptionC;
-          const optionD = row.OptionD;
-          const correctOption = row.CorrectAnswer?.toUpperCase();
+          const optionA = row.OptionA?.trim();
+          const optionB = row.OptionB?.trim();
+          const optionC = row.OptionC?.trim();
+          const optionD = row.OptionD?.trim();
+          const correctOption = row.CorrectAnswer?.toString().toUpperCase().trim();
 
-          if (optionA) currentQuestion.options.push({
-            optionId: 'A',
-            optionText: optionA,
-            isCorrect: correctOption === 'A'
-          });
-          if (optionB) currentQuestion.options.push({
-            optionId: 'B',
-            optionText: optionB,
-            isCorrect: correctOption === 'B'
-          });
-          if (optionC) currentQuestion.options.push({
-            optionId: 'C',
-            optionText: optionC,
-            isCorrect: correctOption === 'C'
-          });
-          if (optionD) currentQuestion.options.push({
-            optionId: 'D',
-            optionText: optionD,
-            isCorrect: correctOption === 'D'
-          });
+          if (optionA) {
+            currentQuestion.options.push({
+              optionId: 'A',
+              optionText: optionA,
+              isCorrect: correctOption === 'A'
+            });
+          }
+          if (optionB) {
+            currentQuestion.options.push({
+              optionId: 'B',
+              optionText: optionB,
+              isCorrect: correctOption === 'B'
+            });
+          }
+          if (optionC) {
+            currentQuestion.options.push({
+              optionId: 'C',
+              optionText: optionC,
+              isCorrect: correctOption === 'C'
+            });
+          }
+          if (optionD) {
+            currentQuestion.options.push({
+              optionId: 'D',
+              optionText: optionD,
+              isCorrect: correctOption === 'D'
+            });
+          }
+          
+          // Remove correctAnswers array for multiple-choice
+          delete currentQuestion.correctAnswers;
         } else if (questionType === 'true-false') {
-          currentQuestion.correctAnswer = row.CorrectAnswer?.toLowerCase() === 'true';
+          const correctAnswerValue = row.CorrectAnswer?.toString().toLowerCase().trim();
+          currentQuestion.correctAnswer = correctAnswerValue === 'true';
           currentQuestion.options = [
-            { optionId: 'true', optionText: 'True', isCorrect: currentQuestion.correctAnswer },
-            { optionId: 'false', optionText: 'False', isCorrect: !currentQuestion.correctAnswer }
+            { optionId: 'true', optionText: 'True', isCorrect: currentQuestion.correctAnswer === true },
+            { optionId: 'false', optionText: 'False', isCorrect: currentQuestion.correctAnswer === false }
           ];
+          
+          // Remove correctAnswers array for true-false
+          delete currentQuestion.correctAnswers;
         } else if (questionType === 'fill-blank') {
-          const answers = row.CorrectAnswer?.split('|') || [];
-          currentQuestion.correctAnswers = answers.map(a => a.trim());
-          currentQuestion.caseSensitive = row.CaseSensitive?.toLowerCase() === 'yes';
+          const answers = row.CorrectAnswer?.toString().split('|') || [];
+          currentQuestion.correctAnswers = answers.map(a => a.trim()).filter(a => a);
+          currentQuestion.caseSensitive = row.CaseSensitive?.toString().toLowerCase() === 'yes';
+          
+          // Remove options array for fill-blank
+          delete currentQuestion.options;
         } else if (questionType === 'essay') {
           currentQuestion.maxWords = parseInt(row.MaxWords) || 500;
-          currentQuestion.rubric = row.Rubric || '';
+          currentQuestion.rubric = row.Rubric?.trim() || '';
+          
+          // Remove options and correctAnswers for essay
+          delete currentQuestion.options;
+          delete currentQuestion.correctAnswers;
         }
       }
     });
@@ -222,6 +245,13 @@ const uploadQuizFromExcel = async (req, res) => {
       questions.push(currentQuestion);
     }
 
+    if (questions.length === 0) {
+      return res.json({ success: false, message: 'No valid questions found in Excel file' });
+    }
+
+    // Calculate total points
+    const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
+
     // Create quiz
     const quiz = new Quiz({
       courseId,
@@ -229,8 +259,10 @@ const uploadQuizFromExcel = async (req, res) => {
       lectureId,
       quizTitle,
       quizDescription,
+      quizType,
       duration,
       passingScore,
+      totalPoints,
       questions,
       createdBy: educatorId,
       isPublished: false // Save as draft
@@ -632,6 +664,7 @@ const downloadExcelTemplate = async (req, res) => {
       {
         QuizTitle: 'Sample Quiz',
         QuizDescription: 'Quiz description here',
+        QuizType: 'quiz',
         Duration: '30',
         PassingScore: '70',
         Question: '',
@@ -650,6 +683,7 @@ const downloadExcelTemplate = async (req, res) => {
       {
         QuizTitle: '',
         QuizDescription: '',
+        QuizType: '',
         Duration: '',
         PassingScore: '',
         Question: 'What is React?',
@@ -668,6 +702,7 @@ const downloadExcelTemplate = async (req, res) => {
       {
         QuizTitle: '',
         QuizDescription: '',
+        QuizType: '',
         Duration: '',
         PassingScore: '',
         Question: 'React uses Virtual DOM',
@@ -686,6 +721,7 @@ const downloadExcelTemplate = async (req, res) => {
       {
         QuizTitle: '',
         QuizDescription: '',
+        QuizType: '',
         Duration: '',
         PassingScore: '',
         Question: 'Explain the concept of hooks in React',
@@ -704,6 +740,7 @@ const downloadExcelTemplate = async (req, res) => {
       {
         QuizTitle: '',
         QuizDescription: '',
+        QuizType: '',
         Duration: '',
         PassingScore: '',
         Question: 'The ____ hook is used for state management',

@@ -299,21 +299,27 @@ export const getEnrolledStudentsData = async (req, res) => {
         const purchases = await Purchase.find({
             courseId: { $in: courseIds },
             status: 'completed'
-        }).populate('userId', 'name imageUrl').populate('courseId', 'courseTitle');
+        })
+        .populate('userId', 'name imageUrl email')
+        .populate('courseId', 'courseTitle')
+        .sort({ createdAt: -1 }); // Sort by newest first
 
-        // enrolled students data
+        // enrolled students data with amount
         const enrolledStudents = purchases.map(purchase => ({
             student: purchase.userId,
-            courseTitle: purchase.courseId.courseTitle,
+            courseTitle: purchase.courseId?.courseTitle || 'Unknown Course',
+            amount: purchase.amount || 0,
             purchaseDate: purchase.createdAt
         }));
 
         res.json({
             success: true,
-            enrolledStudents
+            enrolledStudents,
+            total: enrolledStudents.length
         });
 
     } catch (error) {
+        console.error('Get enrolled students error:', error);
         res.json({
             success: false,
             message: error.message

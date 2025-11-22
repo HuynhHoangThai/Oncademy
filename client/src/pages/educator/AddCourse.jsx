@@ -17,6 +17,8 @@ const AddCourse = () => {
   const [image, setImage] = useState(null)
   const [chapters, setChapters] = useState([]);
   const [showPopup, setShowPopup] = useState(false);
+  const [showChapterDialog, setShowChapterDialog] = useState(false);
+  const [chapterTitle, setChapterTitle] = useState('');
   const [currentChapterId, setCurrentChapterId] = useState(null);
   
   const [lectureDetails, setLectureDetails] = useState({
@@ -30,17 +32,7 @@ const AddCourse = () => {
   const navigate = useNavigate();
   const handleChapter = (action, chapterId) => {
     if (action === 'add') {
-      const title = prompt('Enter Chapter Name:');
-      if (title) {
-        const newChapter = {
-          chapterId: Uniqid(),
-          chapterTitle: title,
-          chapterContent: [],
-          collapsed: false,
-          chapterOrder: chapters.length > 0 ? chapters.slice(-1)[0].chapterOrder + 1 : 1,
-        };
-        setChapters([...chapters, newChapter]);
-      }
+      setShowChapterDialog(true);
     } else if (action === 'remove') {
       setChapters(chapters.filter((chapter) => chapter.chapterId !== chapterId));
     } else if (action === 'toggle') {
@@ -49,6 +41,21 @@ const AddCourse = () => {
           chapter.chapterId === chapterId ? { ...chapter, collapsed: !chapter.collapsed } : chapter
         )
       );
+    }
+  };
+  
+  const addChapter = () => {
+    if (chapterTitle.trim()) {
+      const newChapter = {
+        chapterId: Uniqid(),
+        chapterTitle: chapterTitle.trim(),
+        chapterContent: [],
+        collapsed: false,
+        chapterOrder: chapters.length > 0 ? chapters.slice(-1)[0].chapterOrder + 1 : 1,
+      };
+      setChapters([...chapters, newChapter]);
+      setShowChapterDialog(false);
+      setChapterTitle('');
     }
   };
     const handleLecture = (action, chapterId, lectureIndex) => {
@@ -229,10 +236,49 @@ const AddCourse = () => {
           <button type="submit" className="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg shadow-lg transition">Create Course</button>
         </form>
       </div>
+      {/* Dialog Add Chapter */}
+      {showChapterDialog && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-md z-50 animate-fadeIn">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md relative animate-scaleIn">
+            <button onClick={() => { setShowChapterDialog(false); setChapterTitle(''); }} className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-xl">&times;</button>
+            <h2 className="text-xl font-bold mb-4 text-blue-700">Add Chapter</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-gray-700 font-semibold mb-1">Chapter Name</label>
+                <input 
+                  type="text" 
+                  className="block w-full border rounded py-2 px-3 outline-none focus:border-blue-400" 
+                  value={chapterTitle} 
+                  onChange={e => setChapterTitle(e.target.value)}
+                  onKeyPress={e => e.key === 'Enter' && addChapter()}
+                  placeholder="Enter chapter name"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-2">
+                <button 
+                  onClick={addChapter} 
+                  disabled={!chapterTitle.trim()}
+                  className="flex-1 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold text-lg transition"
+                >
+                  Add Chapter
+                </button>
+                <button 
+                  onClick={() => { setShowChapterDialog(false); setChapterTitle(''); }}
+                  className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Popup Add Lecture */}
       {showPopup && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md relative">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-md z-50 animate-fadeIn">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md relative animate-scaleIn">
             <button onClick={() => setShowPopup(false)} className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-xl">&times;</button>
             <h2 className="text-xl font-bold mb-4 text-blue-700">Add Lecture</h2>
             <div className="space-y-3">

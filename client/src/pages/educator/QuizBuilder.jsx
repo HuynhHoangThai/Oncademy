@@ -47,7 +47,7 @@ const QuizBuilder = () => {
       });
 
       if (data.success) {
-        setCourse(data.course);
+        setCourse(data.courseData);
       } else {
         toast.error(data.message || 'Course not found');
         navigate('/educator/quizzes');
@@ -79,7 +79,7 @@ const QuizBuilder = () => {
         });
 
         if (courseResponse.success) {
-          setCourse(courseResponse.course);
+          setCourse(courseResponse.courseData);
         }
 
         // Transform questions to match form structure
@@ -214,16 +214,52 @@ const QuizBuilder = () => {
 
     try {
       const token = await getToken();
+      
+      // Transform questions back to database format
+      const transformedQuestions = quizData.questions.map((q, index) => {
+        const baseQuestion = {
+          questionId: `q_${Date.now()}_${index}`,
+          questionType: q.questionType,
+          questionText: q.questionText.trim(),
+          points: q.points,
+          explanation: q.explanation?.trim() || ''
+        };
+
+        if (q.questionType === 'multiple-choice') {
+          // Transform options array of strings to array of objects
+          baseQuestion.options = q.options.map((optText, optIndex) => ({
+            optionId: String.fromCharCode(65 + optIndex), // A, B, C, D
+            optionText: optText.trim(),
+            isCorrect: String.fromCharCode(65 + optIndex) === q.correctAnswer
+          }));
+        } else if (q.questionType === 'true-false') {
+          // Set correctAnswer as boolean
+          baseQuestion.correctAnswer = q.correctAnswer === 'true';
+          baseQuestion.options = [
+            { optionId: 'true', optionText: 'True', isCorrect: baseQuestion.correctAnswer === true },
+            { optionId: 'false', optionText: 'False', isCorrect: baseQuestion.correctAnswer === false }
+          ];
+        } else if (q.questionType === 'fill-blank') {
+          // Set correctAnswers as array
+          baseQuestion.correctAnswers = [q.correctAnswer.trim()];
+          baseQuestion.caseSensitive = q.caseSensitive || false;
+        } else if (q.questionType === 'essay') {
+          // Set essay-specific fields
+          baseQuestion.maxWords = q.maxWords || 500;
+          baseQuestion.rubric = q.rubric?.trim() || '';
+        }
+
+        return baseQuestion;
+      });
+
       const payload = {
         ...quizData,
         courseId: isEditMode ? course._id : courseId,
         chapterId: selectedChapter || undefined,
         lectureId: selectedLecture || undefined,
-        questions: quizData.questions.map(q => {
-          // eslint-disable-next-line no-unused-vars
-          const { id, ...rest } = q;
-          return rest;
-        })
+        attemptsAllowed: quizData.maxAttempts,
+        totalPoints: transformedQuestions.reduce((sum, q) => sum + q.points, 0),
+        questions: transformedQuestions
       };
 
       const url = isEditMode 
@@ -294,8 +330,8 @@ const QuizBuilder = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">-- Select Chapter (Optional) --</option>
-                  {course?.chapters?.map((chapter) => (
-                    <option key={chapter._id} value={chapter._id}>
+                  {course?.courseContent?.map((chapter) => (
+                    <option key={chapter.chapterId} value={chapter.chapterId}>
                       {chapter.chapterTitle}
                     </option>
                   ))}
@@ -312,10 +348,10 @@ const QuizBuilder = () => {
                 >
                   <option value="">-- Select Lecture (Optional) --</option>
                   {selectedChapter && 
-                    course?.chapters
-                      ?.find(ch => ch._id === selectedChapter)
-                      ?.lectures?.map((lecture) => (
-                        <option key={lecture._id} value={lecture._id}>
+                    course?.courseContent
+                      ?.find(ch => ch.chapterId === selectedChapter)
+                      ?.chapterContent?.map((lecture) => (
+                        <option key={lecture.lectureId} value={lecture.lectureId}>
                           {lecture.lectureTitle}
                         </option>
                       ))
