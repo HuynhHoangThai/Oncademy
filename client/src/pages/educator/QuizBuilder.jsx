@@ -83,22 +83,55 @@ const QuizBuilder = () => {
         }
 
         // Transform questions to match form structure
-        const transformedQuestions = quiz.questions.map((q, index) => ({
-          id: Date.now() + index,
-          questionText: q.questionText,
-          questionType: q.questionType,
-          points: q.points,
-          options: q.questionType === 'multiple-choice' ? q.options.map(opt => opt.optionText) : [],
-          correctAnswer: q.questionType === 'multiple-choice' 
-            ? String.fromCharCode(65 + q.options.findIndex(opt => opt.isCorrect))
-            : q.questionType === 'true-false'
-            ? q.options.find(opt => opt.isCorrect)?.optionText.toLowerCase()
-            : q.correctAnswers?.[0] || '',
-          explanation: q.explanation || '',
-          caseSensitive: q.caseSensitive || false,
-          maxWords: q.maxWords || 500,
-          rubric: q.rubric || ''
-        }));
+        const transformedQuestions = quiz.questions.map((q, index) => {
+          const baseQuestion = {
+            id: Date.now() + index,
+            questionText: q.questionText,
+            questionType: q.questionType,
+            points: q.points,
+            explanation: q.explanation || '',
+            caseSensitive: q.caseSensitive || false,
+            maxWords: q.maxWords || 500,
+            rubric: q.rubric || ''
+          };
+
+          // Handle multiple-choice
+          if (q.questionType === 'multiple-choice') {
+            baseQuestion.options = (q.options || []).map(opt => opt.optionText || opt);
+            const correctIndex = (q.options || []).findIndex(opt => opt.isCorrect);
+            baseQuestion.correctAnswer = correctIndex >= 0 ? String.fromCharCode(65 + correctIndex) : '';
+          }
+          // Handle true-false
+          else if (q.questionType === 'true-false') {
+            baseQuestion.options = [];
+            // Check if correctAnswer is boolean (from Excel) or need to find from options
+            if (typeof q.correctAnswer === 'boolean') {
+              baseQuestion.correctAnswer = q.correctAnswer ? 'true' : 'false';
+            } else if (q.options && q.options.length > 0) {
+              const correctOption = q.options.find(opt => opt.isCorrect);
+              baseQuestion.correctAnswer = correctOption?.optionText?.toLowerCase() || 'true';
+            } else {
+              baseQuestion.correctAnswer = 'true';
+            }
+          }
+          // Handle fill-blank
+          else if (q.questionType === 'fill-blank') {
+            baseQuestion.options = [];
+            baseQuestion.correctAnswer = (q.correctAnswers && q.correctAnswers[0]) || '';
+          }
+          // Handle essay
+          else if (q.questionType === 'essay') {
+            baseQuestion.options = [];
+            baseQuestion.correctAnswer = '';
+          }
+          // Default
+          else {
+            baseQuestion.options = [];
+            baseQuestion.correctAnswer = '';
+          }
+
+          return baseQuestion;
+        });
 
         setQuizData({
           quizTitle: quiz.quizTitle,
@@ -153,6 +186,15 @@ const QuizBuilder = () => {
       ...prev,
       questions: [...prev.questions, newQuestion]
     }));
+    
+    // Scroll to the new question after a short delay
+    setTimeout(() => {
+      const questionElements = document.querySelectorAll('[data-question-card]');
+      const lastQuestion = questionElements[questionElements.length - 1];
+      if (lastQuestion) {
+        lastQuestion.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
   };
 
   const removeQuestion = (questionId) => {
@@ -202,14 +244,25 @@ const QuizBuilder = () => {
         toast.error('All questions must have text');
         return;
       }
-      if (q.questionType === 'multiple-choice' && q.options.some(opt => !opt.trim())) {
-        toast.error('All options must be filled');
+      if (q.questionType === 'multiple-choice') {
+        if (q.options.some(opt => !opt.trim())) {
+          toast.error('All options must be filled');
+          return;
+        }
+        if (!q.correctAnswer) {
+          toast.error('All multiple-choice questions must have a correct answer');
+          return;
+        }
+      }
+      if (q.questionType === 'true-false' && !q.correctAnswer) {
+        toast.error('All true/false questions must have a correct answer');
         return;
       }
-      if (!q.correctAnswer) {
-        toast.error('All questions must have a correct answer');
+      if (q.questionType === 'fill-blank' && !q.correctAnswer?.trim()) {
+        toast.error('All fill-in-the-blank questions must have a correct answer');
         return;
       }
+      // Essay questions don't need correctAnswer validation
     }
 
     try {
@@ -515,7 +568,7 @@ const QuizBuilder = () => {
             ) : (
               <div className="space-y-4">
                 {quizData.questions.map((question, index) => (
-                  <div key={question.id} className="border border-gray-300 rounded-lg p-4 bg-gray-50">
+                  <div key={question.id} data-question-card className="border border-gray-300 rounded-lg p-4 bg-gray-50">
                     <div className="flex justify-between items-start mb-3">
                       <h3 className="font-semibold text-gray-800">Question {index + 1} ({question.questionType})</h3>
                       <button

@@ -1,16 +1,13 @@
 
 import { useContext } from 'react'
 import { AppContext } from '../../context/AppContext'
-import Loading from '../../components/students/Loading';
 import { assets } from '../../assets/assets';
 import { useDashboard } from '../../hooks/useDashboard';
 import { DashboardSkeleton } from '../../components/students/SkeletonLoader';
 import { toast } from 'react-toastify';
-import { useQueryClient } from '@tanstack/react-query';
 
 const Dashboard = () => {
   const { currency } = useContext(AppContext);
-  const queryClient = useQueryClient();
   const { data, isLoading, error, refetch, isFetching } = useDashboard();
 
   const dashboardData = data?.dashboardData;
@@ -18,16 +15,6 @@ const Dashboard = () => {
   const handleManualRefresh = async () => {
     await refetch();
     toast.success('Dashboard refreshed successfully');
-  };
-
-  const handleSync = async () => {
-    try {
-      // TODO: Add sync endpoint call if needed
-      await refetch();
-      toast.success('Dashboard synced successfully');
-    } catch (error) {
-      toast.error('Failed to sync dashboard');
-    }
   };
 
   if (isLoading) return <DashboardSkeleton />;
@@ -210,7 +197,7 @@ const Dashboard = () => {
 
         {/* Latest Enrolments Table */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
-          <h2 className="pb-4 text-xl font-bold text-blue-700">Latest Enrolments</h2>
+          <h2 className="pb-4 text-xl font-bold text-blue-700">Latest Enrollments</h2>
           <div className="overflow-x-auto">
             {dashboardData.recentEnrollments && dashboardData.recentEnrollments.length > 0 ? (
               <table className="min-w-full text-sm">
