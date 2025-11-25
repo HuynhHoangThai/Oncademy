@@ -45,20 +45,13 @@ const createQuiz = async (req, res) => {
 
       // Handle multiple-choice
       if (q.questionType === 'multiple-choice') {
-        baseQuestion.options = (q.options || []).map((optionText, optIndex) => ({
-          optionId: generateId(),
-          optionText: optionText,
-          isCorrect: q.correctAnswer === String.fromCharCode(65 + optIndex) // A=0, B=1, etc
-        }));
+        baseQuestion.options = q.options;
       }
 
       // Handle true-false
       if (q.questionType === 'true-false') {
-        baseQuestion.correctAnswer = q.correctAnswer === 'true' || q.correctAnswer === true;
-        baseQuestion.options = [
-          { optionId: generateId(), optionText: 'True', isCorrect: baseQuestion.correctAnswer === true },
-          { optionId: generateId(), optionText: 'False', isCorrect: baseQuestion.correctAnswer === false }
-        ];
+        baseQuestion.correctAnswer = q.correctAnswer;
+        baseQuestion.options = q.options;
       }
 
       // Handle essay

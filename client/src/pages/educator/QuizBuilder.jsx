@@ -97,14 +97,17 @@ const QuizBuilder = () => {
 
           // Handle multiple-choice
           if (q.questionType === 'multiple-choice') {
-            baseQuestion.options = (q.options || []).map(opt => opt.optionText || opt);
+            // Ensure options are array of strings before mapping
+            let optionsArr = Array.isArray(q.options)
+              ? q.options.map(opt => typeof opt === 'string' ? opt : (opt.optionText || ''))
+              : [];
+            baseQuestion.options = optionsArr;
             const correctIndex = (q.options || []).findIndex(opt => opt.isCorrect);
             baseQuestion.correctAnswer = correctIndex >= 0 ? String.fromCharCode(65 + correctIndex) : '';
           }
           // Handle true-false
           else if (q.questionType === 'true-false') {
             baseQuestion.options = [];
-            // Check if correctAnswer is boolean (from Excel) or need to find from options
             if (typeof q.correctAnswer === 'boolean') {
               baseQuestion.correctAnswer = q.correctAnswer ? 'true' : 'false';
             } else if (q.options && q.options.length > 0) {
