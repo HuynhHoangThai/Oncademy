@@ -11,6 +11,15 @@ const userSchema = new mongoose.Schema({
             ref: 'Course'
         }
     ],
+    applicationStatus: {
+        type: String,
+        enum: ['none', 'pending', 'approved', 'rejected'],
+        default: 'none'
+    },
+    resume: {
+        type: String,
+        default: ''
+    }
 }, { timestamps: true });
 
 const User = mongoose.model("User", userSchema);
