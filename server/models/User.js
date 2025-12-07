@@ -11,6 +11,17 @@ const userSchema = new mongoose.Schema({
             ref: 'Course'
         }
     ],
+    createdCourses: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Course'
+        }
+    ],
+    role: {
+        type: String,
+        enum: ['student', 'educator', 'admin'],
+        default: 'student'
+    },
     applicationStatus: {
         type: String,
         enum: ['none', 'pending', 'approved', 'rejected'],

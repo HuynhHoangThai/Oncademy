@@ -13,20 +13,7 @@ export const getUserData = async (req, res) => {
             return res.json({ success: false, message: 'User not authenticated' });
         }
         
-        let user = null;
-        let attempts = 0;
-        const maxAttempts = 10;
-        const delayMs = 500;
-
-        while (user === null && attempts < maxAttempts) {
-            user = await User.findById(userId);
-
-            if (user) break;
-
-            attempts++;
-            console.log(`User ${userId} not found (Attempt ${attempts}). Retrying in ${delayMs}ms...`);
-            await new Promise(resolve => setTimeout(resolve, delayMs));
-        }
+        const user = await User.findById(userId);
 
         if (!user) {
             return res.json({ success: false, message: 'User Not Found' });

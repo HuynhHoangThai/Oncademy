@@ -7,6 +7,9 @@ import ErrorBoundary from './components/ErrorBoundary'
 import Loading from './components/students/Loading'
 import Navbar from './components/students/NavBar'
 import ApplyEducator from './pages/students/ApplyEducator'
+import ManageEducators from './pages/admin/ManageEducators'
+import ManageStudents from './pages/admin/ManageStudents'
+import UserDetails from './pages/admin/UserDetails'
 
 // Lazy load pages for code splitting
 const Home = lazy(() => import('./pages/students/Home'))
@@ -32,12 +35,20 @@ const GradeQuiz = lazy(() => import('./pages/educator/GradeQuiz'))
 const StudentsEnrolled = lazy(() => import('./pages/educator/StudentsEnrolled'))
 const MyCourses = lazy(() => import('./pages/educator/MyCourses'))
 
+// Admin pages
+const AdminLayout = lazy(() => import('./pages/admin/AdminLayout')) 
+// const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
+const PendingApplications = lazy(() => import('./pages/admin/PendingApplications'))
+const ManageUsers = lazy(() => import('./pages/admin/ManageUsers'))
+
 const App = () => {
   const isEducatorRoute = useMatch('/educator/*');
+  const isAdminRoute = useMatch('/admin/*');
+
   return (
     <ErrorBoundary>
       <div className='text-default min-h-screen '>
-        {!isEducatorRoute && <Navbar />}
+        {!isEducatorRoute && !isAdminRoute && <Navbar />}
         <Suspense fallback={<Loading />}>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -65,6 +76,15 @@ const App = () => {
               <Route path='quiz/grade/:attemptId' element={<GradeQuiz />} />
               <Route path='students-enrolled' element={<StudentsEnrolled />} />
               <Route path='students-enrolled/:courseId' element={<StudentsEnrolled />} />
+            </Route>
+            <Route path='/admin' element={<AdminLayout />}> 
+              {/* <Route index element={<AdminDashboard />} /> */}
+              <Route path='applications' element={<PendingApplications />} />
+              <Route path='users'>
+                <Route path='educators' element={<ManageEducators />} />
+                <Route path='students' element={<ManageStudents />} />
+                <Route path=':role/:userId' element={<UserDetails />} />
+              </Route>
             </Route>
           </Routes>
         </Suspense>

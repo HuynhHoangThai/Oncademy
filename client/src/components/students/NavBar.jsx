@@ -1,6 +1,7 @@
 import { assets } from '../../assets/assets'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useClerk, UserButton, useUser } from '@clerk/clerk-react';
+import { toast } from 'react-toastify';
 
 const NavBar = () => {
   const navigate = useNavigate();
@@ -15,7 +16,7 @@ const NavBar = () => {
     if (isEducatorRole) {
       navigate('/educator');
     } else if (applicationStatus === 'pending') {
-      alert('Your CV í being checked by admin. Please return later.');
+      toast.warning('Your CV is being checked by admin. Please return later.');
     } else {
       navigate('/apply-educator');
     }

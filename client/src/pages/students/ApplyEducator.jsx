@@ -4,6 +4,7 @@ import { useUser } from '@clerk/clerk-react';
 import { uploadFile } from '../../utils/fileUploader';
 import api from '../../utils/api';
 import { useEffect } from 'react';
+import { toast } from 'react-toastify';
 
 const ApplyEducator = () => {
     const navigate = useNavigate();
@@ -77,8 +78,7 @@ const ApplyEducator = () => {
         event.preventDefault();
 
         if (!selectedFile) {
-            setMessage('Please select CV file (PDF or DOCX).');
-            setIsError(true);
+            toast.error('Please select CV file (PDF or DOCX).');
             return;
         }
 
@@ -95,21 +95,21 @@ const ApplyEducator = () => {
             }
 
             setMessage('Uploading CV...');
-            const response = await api.post('/user/apply-educator', { resumeUrl });
+            const responseData = await api.post('/api/user/apply-educator', { resumeUrl });
 
-            if (response.data.success) {
+            if (responseData && responseData.success) { 
                 await user.reload();
 
-                setMessage('✅ Application has been submitted successfully! Please wait for Admin to review.');
-                setIsError(false);
+                toast.success('✅ Application has been submitted successfully! Please wait for Admin to review.');
+                navigate('/');
             } else {
-                throw new Error(response.data.message || ' Error when submitting application.');
+                throw new Error(responseData?.message || 'Lỗi khi gửi đơn do server trả về.');
             }
 
         } catch (error) {
             console.error('Submission error:', error);
-            setMessage(`❌ Error: ${error.message}`);
-            setIsError(true);
+            const errorMessage = error.message || error.toString();
+            toast.error(`Submission Error: ${errorMessage}`);
         } finally {
             setIsLoading(false);
         }
