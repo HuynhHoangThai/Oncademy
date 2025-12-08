@@ -20,7 +20,8 @@ const AddCourse = () => {
   const [showChapterDialog, setShowChapterDialog] = useState(false);
   const [chapterTitle, setChapterTitle] = useState('');
   const [currentChapterId, setCurrentChapterId] = useState(null);
-  
+  const [saving, setSaving] = useState(false);
+
   const [lectureDetails, setLectureDetails] = useState({
     lectureTitle: '',
     lectureDuration: 0,
@@ -97,8 +98,10 @@ const AddCourse = () => {
   };
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!courseTitle) return toast.error('Please provide a course title')
+    setSaving(true);
+    
     try {
-      if (!courseTitle) return toast.error('Please provide a course title')
       const token = await getToken()
 
       const payload = {
@@ -139,6 +142,8 @@ const AddCourse = () => {
     } catch (err) {
       console.error('AddCourse error', err)
       toast.error(err?.response?.data?.message || err.message || 'Server error')
+    } finally {
+      setSaving(false);
     }
     
   }
@@ -166,7 +171,7 @@ const AddCourse = () => {
           {/* Course Description */}
           <div>
             <label className="block text-gray-700 font-semibold mb-1">Course Description</label>
-            <div ref={editorRef} className="bg-gray-50 rounded-lg border border-gray-200 min-h-[120px]" style={{minHeight:180}} />
+            <div ref={editorRef} className="quill-fix bg-gray-50 rounded-lg border border-gray-200 min-h-[120px]" style={{minHeight:180}} />
           </div>
           {/* Price & Thumbnail */}
           <div className="flex flex-col md:flex-row gap-6">
@@ -233,7 +238,19 @@ const AddCourse = () => {
             </div>
           </div>
           {/* Submit Button */}
-          <button type="submit" className="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg shadow-lg transition">Create Course</button>
+          <button
+            type="submit"
+            disabled={saving}
+            className={`w-full py-3 rounded-lg font-bold text-lg shadow-lg transition flex items-center justify-center gap-2 ${saving ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+          >
+            {saving ? (
+              <>
+                <LoadingSpinner size="h-5 w-5" color="text-white" />
+                Creating...
+              </>
+            ) : 'Create Course'}
+          </button>
         </form>
       </div>
       {/* Dialog Add Chapter */}

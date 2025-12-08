@@ -44,6 +44,7 @@ const QuizResult = () => {
   if (loading) return <Loading />;
   if (!result) return null;
 
+  const detailedResults = result.detailedResults;
   const isPending = result.status === 'pending';
   const scorePercentage = result.scoring?.scorePercentage || 0;
   const passed = result.scoring?.passed;
@@ -236,6 +237,63 @@ const QuizResult = () => {
             </div>
           </div>
         </div>
+
+        {!isPending && detailedResults && detailedResults.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-xl p-6 mb-8 border border-gray-200">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Question Review (Q&A)</h2>
+            <div className="space-y-6">
+              {detailedResults.map((result, index) => (
+                <div
+                  key={result.questionId}
+                  className={`border-l-4 p-4 rounded-r-lg shadow-sm ${result.isCorrect === true
+                      ? 'border-green-500 bg-green-50'
+                      : result.isCorrect === false
+                        ? 'border-red-500 bg-red-50'
+                        : 'border-gray-500 bg-gray-50'
+                    }`}
+                >
+                  {/* Question */}
+                  <p className="font-semibold text-gray-800 mb-2">Question {index + 1}: {result.questionText}</p>
+
+                  {/* User Answer */}
+                  <div className="bg-white rounded-lg p-3 mb-2 border border-gray-200">
+                    <p className={`text-sm font-medium ${result.isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                      Your Answer: <span className="font-bold">{result.userAnswer || 'No Answer'}</span>
+                      {result.isCorrect ? ' (✓ Correct)' : ' (✗ Incorrect)'}
+                    </p>
+                  </div>
+
+                  {/* Correct Answer (Conditional Display) */}
+                  {result.correctAnswerData && (
+                    <div className="mt-2 text-sm text-blue-700 bg-blue-50 p-3 rounded-lg">
+                      <p className="font-semibold mb-1">Correct Answer:</p>
+
+                      {/* Handling MC/TrueFalse/Fill in the Blank */}
+                      {result.correctAnswerData.correctOptions && (
+                        <p>- {result.correctAnswerData.correctOptions.map(opt => opt.optionText).join(' / ')}</p>
+                      )}
+                      {result.correctAnswerData.correctAnswers && (
+                        <p>- {result.correctAnswerData.correctAnswers.join(' HOẶC ')}</p>
+                      )}
+                      {result.correctAnswerData.rubric && (
+                        <p className="text-xs text-purple-700 mt-2">Rubric: {result.correctAnswerData.rubric}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Explanation */}
+                  {result.explanation && (
+                    <div className="mt-2 text-sm text-gray-600">
+                      <p className="font-semibold">Explanation:</p>
+                      <p>{result.explanation}</p>
+                    </div>
+                  )}
+
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">

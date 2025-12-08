@@ -4,13 +4,19 @@ import { useAuth } from '@clerk/clerk-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import Loading from '../../components/students/Loading';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { TextField } from '@mui/material';
+import dayjs from 'dayjs';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 const QuizBuilder = () => {
   const { courseId, quizId } = useParams(); // Add quizId for edit mode
   const navigate = useNavigate();
   const { getToken } = useAuth();
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
-
+  const [deadline, setDeadline] = useState(null);
   const [loading, setLoading] = useState(true);
   const [course, setCourse] = useState(null);
   const [selectedChapter, setSelectedChapter] = useState('');
@@ -133,6 +139,8 @@ const QuizBuilder = () => {
           return baseQuestion;
         });
 
+        setDeadline(quiz.deadline ? dayjs(quiz.deadline) : null);
+
         setQuizData({
           quizTitle: quiz.quizTitle,
           quizDescription: quiz.quizDescription,
@@ -233,6 +241,11 @@ const QuizBuilder = () => {
       return;
     }
 
+    if (deadline && deadline.isBefore(dayjs())) {
+      toast.error("Deadline must be set in the future.");
+      return;
+    }
+
     if (quizData.questions.length === 0) {
       toast.error('Please add at least one question');
       return;
@@ -310,7 +323,8 @@ const QuizBuilder = () => {
         courseId: isEditMode ? course._id : courseId,
         chapterId: selectedChapter || undefined,
         lectureId: selectedLecture || undefined,
-        attemptsAllowed: quizData.maxAttempts,
+        attemptsAllowed: quizData.maxAttempts, 
+        deadline: deadline ? deadline.toISOString() : null,
         totalPoints: transformedQuestions.reduce((sum, q) => sum + q.points, 0),
         questions: transformedQuestions
       };
@@ -341,7 +355,7 @@ const QuizBuilder = () => {
     }
   };
 
-  if (loading) return <Loading />;
+  if (loading) return <LoadingSpinner />;
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 to-white py-10 px-4 sm:px-6 lg:px-8">
@@ -378,7 +392,7 @@ const QuizBuilder = () => {
                   value={selectedChapter}
                   onChange={(e) => {
                     setSelectedChapter(e.target.value);
-                    setSelectedLecture(''); // Reset lecture when chapter changes
+                    setSelectedLecture(''); 
                   }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
@@ -495,6 +509,49 @@ const QuizBuilder = () => {
                   min="1"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+              </div>
+
+              <div className="md:col-span-1" style={{ zIndex: 10 }}>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Deadline (Optional)</label>
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                  <DateTimePicker
+                    label="Select Due Date & Time"
+                    value={deadline}
+                    onChange={(newValue) => setDeadline(newValue)}
+
+                    minDateTime={dayjs()}
+
+                    slotProps={{
+                      textField: {
+                        size: 'small',
+                        fullWidth: true,
+                        inputProps: { 'aria-label': 'Deadline picker' },
+
+                        sx: {
+                          '& .MuiInputBase-root': {
+                            borderRadius: '0.5rem', 
+                            padding: '0',
+                            height: 'auto',
+                          },
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#d1d5db !important',
+                          },
+                          '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#121314ff !important',
+                            borderWidth: '2px !important',
+                          },
+                          '& .MuiInputBase-input': {
+                            padding: '8px 16px !important', 
+                            height: 'auto',
+                          },
+                          '& .MuiInputLabel-root': {
+                            color: '#4b5563', 
+                          }
+                        }
+                      },
+                    }}
+                  />
+                </LocalizationProvider>
               </div>
 
               <div className="md:col-span-2 flex flex-wrap gap-4">

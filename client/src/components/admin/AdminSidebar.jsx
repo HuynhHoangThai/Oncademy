@@ -29,7 +29,7 @@ const AdminSidebar = () => {
     };
 
     return (
-        <div className="w-64 bg-gray-800 text-white flex flex-col">
+        <div className="w-64 bg-gray-800 text-white flex flex-col h-full">
             <div className="p-4 text-2xl font-bold border-b border-gray-700">Admin Panel</div>
             <nav className="flex-1 p-4 space-y-2">
                 {navItems.map((item) => (
@@ -84,7 +84,7 @@ const AdminSidebar = () => {
                     )}
                 </div>
             </nav>
-            <div className="p-4 border-t border-gray-700">
+            <div className="p-4 border-t border-gray-700 flex-shrink-0 mt-auto">
                 <div className="flex items-center justify-between">
                     <span>Admin User</span>
                     <UserButton afterSignOutUrl="/" />

@@ -38,7 +38,7 @@ const quizSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
-  dueDate: {
+  deadline: {
     type: Date,
     default: null
   },
@@ -52,7 +52,7 @@ const quizSchema = new mongoose.Schema({
   },
   
   // Attempt Settings
-  attemptsAllowed: {
+  maxAttempts: {
     type: Number,
     default: 0 // 0 = unlimited
   },
