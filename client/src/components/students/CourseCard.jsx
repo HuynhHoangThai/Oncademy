@@ -4,12 +4,12 @@ import { assets } from '../../assets/assets'
 import { AppContext } from '../../context/AppContext'
 
 const CourseCard = memo(({course}) => {
-  const {currency, calculateRating, ratingUpdateTrigger, getTotalReviewCount, toggleFavoriteCourse, isCourseFavorite, addToViewHistory} = useContext(AppContext);
+  const { currency, calculateRating, ratingUpdateTrigger, getTotalReviewCount, toggleFavoriteCourse, isCourseFavorite, addToViewHistory, favoriteCourses } = useContext(AppContext);
   
   // Memoize expensive calculations
   const rating = useMemo(() => calculateRating(course), [course, ratingUpdateTrigger]);
   const reviewCount = useMemo(() => getTotalReviewCount(course), [course, ratingUpdateTrigger]);
-  const isFavorite = useMemo(() => isCourseFavorite(course._id), [course._id]);
+  const isFavorite = useMemo(() => isCourseFavorite(course._id), [course._id, favoriteCourses]);
   
   const handleFavoriteClick = (e) => {
     e.preventDefault();

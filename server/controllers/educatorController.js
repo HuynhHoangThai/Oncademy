@@ -6,26 +6,61 @@ import { v2 as cloudinary } from 'cloudinary'
 import { getEducatorDashboard, syncEducatorDashboard } from '../utils/dashboardHelper.js'
 import { getUserId } from '../utils/authHelper.js'
 
-export const updateRoleToEducator = async (req, res) => {
+// export const updateRoleToEducator = async (req, res) => {
+//     try {
+//         const userId = getUserId(req);
+        
+//         if (!userId) {
+//             return res.json({ success: false, message: 'Unauthorized - No userId' });
+//         }
+
+//         await clerkClient.users.updateUserMetadata(userId, {
+//             publicMetadata: {
+//                 role: 'educator',
+//             },
+//         })
+
+//         res.json({ success: true, message: 'You can publish a course now' })
+
+//     } catch (error) {
+//         res.json({ success: false, message: error.message })
+//     }
+
+// }
+
+export const applyForEducator = async (req, res) => {
     try {
         const userId = getUserId(req);
-        
         if (!userId) {
-            return res.json({ success: false, message: 'Unauthorized - No userId' });
+            return res.json({ success: false, message: 'User not authenticated' });
         }
+
+        const { resumeUrl } = req.body;
+
+        if (!resumeUrl) {
+            return res.json({ success: false, message: 'Resume URL is required' });
+        }
+
+        await User.findByIdAndUpdate(userId,
+            {
+                applicationStatus: 'pending',
+                resume: resumeUrl
+            },
+            { new: true } 
+        );
 
         await clerkClient.users.updateUserMetadata(userId, {
             publicMetadata: {
-                role: 'educator',
+                applicationStatus: 'pending',
             },
-        })
+        });
 
-        res.json({ success: true, message: 'You can publish a course now' })
+        res.json({ success: true, message: 'CV is being checked.' });
 
     } catch (error) {
-        res.json({ success: false, message: error.message })
+        console.error('Apply for educator error:', error);
+        res.status(500).json({ success: false, message: error.message });
     }
-
 }
 
 export const addCourse = async (req, res) => {

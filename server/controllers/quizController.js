@@ -9,10 +9,18 @@ const generateId = () => {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 };
 
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+};
+
 // Create quiz manually
 const createQuiz = async (req, res) => {
   try {
-    const { courseId, chapterId, lectureId, questions, ...quizSettings } = req.body;
+    const { courseId, chapterId, lectureId, questions, maxAttempts, deadline, ...quizSettings } = req.body;
     const educatorId = req.userId || getUserId(req);
     
     if (!educatorId) {
@@ -78,7 +86,8 @@ const createQuiz = async (req, res) => {
       quizType: quizSettings.quizType || 'quiz',
       duration: quizSettings.duration || 30,
       passingScore: quizSettings.passingScore || 70,
-      attemptsAllowed: quizSettings.maxAttempts || quizSettings.attemptsAllowed || 0,
+      attemptsAllowed: maxAttempts || quizSettings.attemptsAllowed || 0, 
+      deadline: deadline || null,
       shuffleQuestions: quizSettings.shuffleQuestions || false,
       shuffleOptions: quizSettings.shuffleOptions || false,
       showCorrectAnswers: quizSettings.showCorrectAnswers !== false,
@@ -330,8 +339,7 @@ const getQuizForTaking = async (req, res) => {
       return res.json({ success: false, message: 'User not authenticated' });
     }
 
-    const quiz = await Quiz.findById(quizId)
-      .select('-questions.correctAnswer -questions.correctAnswers -questions.options.isCorrect');
+    const quiz = await Quiz.findById(quizId).lean();
 
     if (!quiz) {
       return res.json({ success: false, message: 'Quiz not found' });
@@ -347,20 +355,51 @@ const getQuizForTaking = async (req, res) => {
       studentId: userId
     }).sort({ attemptNumber: -1 });
 
-    const attemptNumber = attempts.length + 1;
-
     // Check if max attempts reached
     if (quiz.attemptsAllowed > 0 && attempts.length >= quiz.attemptsAllowed) {
       return res.json({
         success: false,
-        message: `Maximum attempts (${quiz.attemptsAllowed}) reached`
+        message: `Maximum attempts (${quiz.attemptsAllowed}) reached`,
+        maxAttemptsReached: true,
+        previousAttempts: attempts.length,
+        quiz: quiz
       });
     }
 
+    if (quiz.shuffleQuestions && quiz.questions) {
+      quiz.questions = shuffleArray(quiz.questions);
+    }
+
+    if (quiz.shuffleOptions && quiz.questions) {
+      quiz.questions = quiz.questions.map(q => {
+        if (q.options && q.options.length > 0) {
+          q.options = shuffleArray(q.options);
+        }
+        return q;
+      });
+    }
+
+    const quizWithoutAnswers = {
+      ...quiz,
+      questions: quiz.questions.map(q => {
+        const cleanedQuestion = { ...q };
+        delete cleanedQuestion.correctAnswer;
+        delete cleanedQuestion.correctAnswers;
+        if (cleanedQuestion.options) {
+          cleanedQuestion.options = cleanedQuestion.options.map(opt => {
+            const cleanedOption = { ...opt };
+            delete cleanedOption.isCorrect;
+            return cleanedOption;
+          });
+        }
+        return cleanedQuestion;
+      })
+    };
+
     res.json({
       success: true,
-      quiz,
-      attemptNumber,
+      quiz: quizWithoutAnswers,
+      attemptNumber: attempts.length + 1,
       previousAttempts: attempts.length
     });
   } catch (error) {
@@ -384,6 +423,34 @@ const submitQuizAttempt = async (req, res) => {
     if (!quiz || !quiz.isPublished) {
       return res.json({ success: false, message: 'Quiz not available' });
     }
+
+    const detailedResults = quiz.questions.map(question => {
+      const gradedAnswer = gradedAnswers.find(ga => ga.questionId === question.questionId);
+      const isAutoGraded = ['multiple-choice', 'true-false', 'fill-blank'].includes(question.questionType);
+
+      const correctData = {};
+      if (question.questionType === 'multiple-choice' || question.questionType === 'true-false') {
+        correctData.options = question.options.filter(opt => opt.isCorrect).map(opt => opt.optionText);
+      } else if (question.questionType === 'fill-blank') {
+        correctData.correctAnswers = question.correctAnswers;
+      } else if (question.questionType === 'essay') {
+        correctData.rubric = question.rubric;
+      }
+
+      return {
+        questionId: question.questionId,
+        questionText: question.questionText,
+        questionType: question.questionType,
+        userAnswer: gradedAnswer?.answer || null,
+        isCorrect: gradedAnswer?.isCorrect,
+        points: question.points,
+        pointsEarned: gradedAnswer?.pointsEarned,
+
+        correctData: quiz.showCorrectAnswers ? correctData : null,
+
+        explanation: quiz.showCorrectAnswers ? question.explanation : null
+      };
+    });
 
     // Check previous attempts
     const attempts = await QuizAttempt.find({
@@ -481,7 +548,8 @@ const submitQuizAttempt = async (req, res) => {
         : 'Quiz submitted successfully!',
       attemptId: attempt._id,
       scoring: attempt.scoring,
-      needsGrading: hasEssayQuestions
+      needsGrading: hasEssayQuestions,
+      detailedResults: (quiz.showScoreImmediately && !hasEssayQuestions) ? detailedResults : null
     });
   } catch (error) {
     console.error('Submit quiz error:', error);

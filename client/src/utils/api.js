@@ -14,8 +14,15 @@ const api = axios.create({
 // Request interceptor để thêm token
 api.interceptors.request.use(
   async (config) => {
-    // Token sẽ được thêm bởi useAuth hook trong components
-    // Nếu cần token ở đây, có thể import từ Clerk
+    const clerk = window.Clerk;
+
+    if (clerk && clerk.session) {
+      const token = await clerk.session.getToken();
+
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
     return config;
   },
   (error) => {
