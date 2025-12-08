@@ -10,6 +10,7 @@ import ApplyEducator from './pages/students/ApplyEducator'
 import ManageEducators from './pages/admin/ManageEducators'
 import ManageStudents from './pages/admin/ManageStudents'
 import UserDetails from './pages/admin/UserDetails'
+import AdminDashboard from './pages/admin/AdminDashboard'
 
 // Lazy load pages for code splitting
 const Home = lazy(() => import('./pages/students/Home'))
@@ -78,7 +79,7 @@ const App = () => {
               <Route path='students-enrolled/:courseId' element={<StudentsEnrolled />} />
             </Route>
             <Route path='/admin' element={<AdminLayout />}> 
-              {/* <Route index element={<AdminDashboard />} /> */}
+              <Route index element={<AdminDashboard />} />
               <Route path='applications' element={<PendingApplications />} />
               <Route path='users'>
                 <Route path='educators' element={<ManageEducators />} />
