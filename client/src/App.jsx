@@ -49,7 +49,9 @@ const App = () => {
   return (
     <ErrorBoundary>
       <div className='text-default min-h-screen '>
-        {!isEducatorRoute && !isAdminRoute && <Navbar />}
+        <div className="sticky top-0 z-50">
+          {!isEducatorRoute && !isAdminRoute && <Navbar />}
+        </div>
         <Suspense fallback={<Loading />}>
           <Routes>
             <Route path="/" element={<Home />} />
