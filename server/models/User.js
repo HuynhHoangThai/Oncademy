@@ -30,7 +30,11 @@ const userSchema = new mongoose.Schema({
     resume: {
         type: String,
         default: null
-    }
+    },
+    favoriteCourses: [{
+        type: String, 
+        required: false
+    }],
 }, { timestamps: true });
 
 const User = mongoose.model("User", userSchema);
