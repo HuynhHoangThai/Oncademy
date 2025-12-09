@@ -80,6 +80,7 @@ export const rejectEducator = async (req, res) => {
         await clerkClient.users.updateUserMetadata(userIdToReject, {
             publicMetadata: {
                 applicationStatus: 'rejected',
+                resume: null
             },
         });
 
@@ -87,6 +88,7 @@ export const rejectEducator = async (req, res) => {
             userIdToReject,
             {
                 applicationStatus: 'rejected',
+                resume: null
             },
             { new: true }
         );
