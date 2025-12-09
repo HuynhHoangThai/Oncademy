@@ -1,5 +1,5 @@
 import express from 'express';
-import { approveEducator, demoteEducator, getAdminDashboardStats, getPendingEducatorApplications, getRevenueTrend, getUserDetails, getUsersListByRole, rejectEducator } from '../controllers/adminController.js';
+import { approveCourse, approveEducator, demoteEducator, getAdminDashboardStats, getPendingCourses, getPendingEducatorApplications, getRevenueTrend, getUserDetails, getUsersListByRole, rejectCourse, rejectEducator } from '../controllers/adminController.js';
 
 const router = express.Router();
 
@@ -11,5 +11,8 @@ router.get('/revenue-trend', getRevenueTrend);
 router.post('/demote-educator', demoteEducator);
 router.post('/approve-educator', approveEducator);
 router.post('/reject-educator', rejectEducator);
+router.get('/courses/pending', getPendingCourses);
+router.post('/courses/approve', approveCourse);
+router.post('/courses/reject', rejectCourse);
 
 export default router;

@@ -420,3 +420,70 @@ export const getRevenueTrend = async (req, res) => {
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
+
+export const getPendingCourses = async (req, res) => {
+    try {
+        const pendingCourses = await Course.find({ approvalStatus: 'pending' })
+            .populate('educator', 'name email imageUrl') 
+            .sort({ createdAt: 1 })
+            .lean();
+
+        return res.json({ success: true, courses: pendingCourses });
+    } catch (error) {
+        console.error('Get Pending Courses Error:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+export const approveCourse = async (req, res) => {
+    try {
+        const adminId = getUserId(req); 
+        const { courseId } = req.body;
+
+        const updatedCourse = await Course.findByIdAndUpdate(
+            courseId,
+            {
+                approvalStatus: 'approved',
+                isPublished: true, 
+                approvedBy: adminId
+            },
+            { new: true }
+        );
+
+        if (!updatedCourse) {
+            return res.status(404).json({ success: false, message: 'Course not found.' });
+        }
+
+        return res.json({ success: true, message: 'Course approved and published.', course: updatedCourse });
+    } catch (error) {
+        console.error('Approve Course Error:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+export const rejectCourse = async (req, res) => {
+    try {
+        const adminId = getUserId(req);
+        const { courseId, rejectionReason } = req.body; 
+
+        const updatedCourse = await Course.findByIdAndUpdate(
+            courseId,
+            {
+                approvalStatus: 'rejected',
+                isPublished: false,
+                approvedBy: adminId,
+                rejectionReason: rejectionReason || ''
+            },
+            { new: true }
+        );
+
+        if (!updatedCourse) {
+            return res.status(404).json({ success: false, message: 'Course not found.' });
+        }
+
+        return res.json({ success: true, message: 'Course rejected.', course: updatedCourse });
+    } catch (error) {
+        console.error('Reject Course Error:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};

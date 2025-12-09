@@ -24,7 +24,7 @@ export const applyForEducator = async (req, res) => {
                 applicationStatus: 'pending',
                 resume: resumeUrl
             },
-            { new: true } 
+            { new: true }
         );
 
         await clerkClient.users.updateUserMetadata(userId, {
@@ -48,21 +48,25 @@ export const addCourse = async (req, res) => {
 
         const { courseData } = req.body
 
-    const imageFile = req.file
+        const imageFile = req.file
 
-    const educatorId = getUserId(req);
-    
-    if (!educatorId) {
-        return res.json({ success: false, message: 'Unauthorized - No userId' });
-    }
+        const educatorId = getUserId(req);
 
-    if (!imageFile) {
+        if (!educatorId) {
+            return res.json({ success: false, message: 'Unauthorized - No userId' });
+        }
+
+        if (!imageFile) {
             return res.json({ success: false, message: 'Thumbnail Not Attached' })
         }
 
         const parsedCourseData = await JSON.parse(courseData)
 
-        parsedCourseData.educator = educatorId
+        parsedCourseData.educator = educatorId;
+        parsedCourseData.approvalStatus = 'pending';
+        parsedCourseData.isPublished = false;
+        parsedCourseData.approvedBy = null;
+        parsedCourseData.rejectionReason = '';
 
         const newCourse = await Course.create(parsedCourseData)
 
@@ -70,7 +74,7 @@ export const addCourse = async (req, res) => {
         // Convert buffer to base64 data URI
         const b64 = Buffer.from(imageFile.buffer).toString('base64')
         const dataURI = `data:${imageFile.mimetype};base64,${b64}`
-        
+
         const imageUpload = await cloudinary.uploader.upload(dataURI, {
             resource_type: 'auto'
         })
@@ -84,7 +88,10 @@ export const addCourse = async (req, res) => {
             console.error('Dashboard sync error:', err);
         });
 
-        res.json({ success: true, message: 'Course Added' })
+        res.json({
+            success: true,
+            message: 'Course submitted successfully! Please wait for Admin approval.'
+        })
 
     } catch (error) {
 
@@ -97,11 +104,11 @@ export const addCourse = async (req, res) => {
 export const getEducatorCourses = async (req, res) => {
     try {
         const educator = getUserId(req);
-        
+
         if (!educator) {
             return res.json({ success: false, message: 'Unauthorized - No userId' });
         }
-        
+
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 12;
         const skip = (page - 1) * limit;
@@ -167,7 +174,7 @@ export const getEducatorCourses = async (req, res) => {
 export const educatorDashboardData = async (req, res) => {
     try {
         const educator = getUserId(req);
-        
+
         if (!educator) {
             return res.json({ success: false, message: 'Unauthorized - No userId' });
         }
@@ -218,7 +225,7 @@ export const educatorDashboardData = async (req, res) => {
 export const forceSyncDashboard = async (req, res) => {
     try {
         const educator = getUserId(req);
-        
+
         if (!educator) {
             return res.json({ success: false, message: 'Unauthorized - No userId' });
         }
@@ -250,7 +257,7 @@ export const forceSyncDashboard = async (req, res) => {
 export const debugPurchases = async (req, res) => {
     try {
         const educator = getUserId(req);
-        
+
         if (!educator) {
             return res.json({ success: false, message: 'Unauthorized - No userId' });
         }
@@ -298,7 +305,7 @@ export const debugPurchases = async (req, res) => {
 export const getEnrolledStudentsData = async (req, res) => {
     try {
         const educator = getUserId(req);
-        
+
         if (!educator) {
             return res.json({ success: false, message: 'Unauthorized - No userId' });
         }
@@ -314,9 +321,9 @@ export const getEnrolledStudentsData = async (req, res) => {
             courseId: { $in: courseIds },
             status: 'completed'
         })
-        .populate('userId', 'name imageUrl email')
-        .populate('courseId', 'courseTitle')
-        .sort({ createdAt: -1 }); // Sort by newest first
+            .populate('userId', 'name imageUrl email')
+            .populate('courseId', 'courseTitle')
+            .sort({ createdAt: -1 }); // Sort by newest first
 
         // enrolled students data with amount
         const enrolledStudents = purchases.map(purchase => ({

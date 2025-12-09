@@ -15,7 +15,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, confirm
             <div className="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full mx-4 transform transition-all">
                 <h3 className="text-xl font-bold mb-4 text-gray-800 border-b pb-2">{title}</h3>
 
-                <p className="text-gray-600 mb-6">{message}</p>
+                <div className="text-gray-600 mb-6">{message}</div>
 
                 <div className="flex justify-end space-x-3">
                     {/* Nút Hủy */}
