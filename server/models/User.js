@@ -38,6 +38,14 @@ const userSchema = new mongoose.Schema({
     rejectionReason: {
         type: String,
         default: ''
+    },
+    isAccountBanned: {
+        type: Boolean,
+        default: false
+    },
+    banReason: {
+        type: String,
+        default: ''
     }
 }, { timestamps: true });
 

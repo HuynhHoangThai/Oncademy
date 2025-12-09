@@ -347,3 +347,43 @@ export const getEnrolledStudentsData = async (req, res) => {
         });
     }
 };
+
+export const togglePublishCourse = async (req, res) => {
+    try {
+        const { courseId } = req.body;
+        const educatorId = getUserId(req);
+
+        const course = await Course.findById(courseId);
+
+        if (!course) {
+            return res.status(404).json({ success: false, message: 'Course not found' });
+        }
+
+        // Kiểm tra quyền sở hữu
+        if (course.educator.toString() !== educatorId) {
+            return res.status(403).json({ success: false, message: 'Unauthorized access' });
+        }
+
+        // 🚨 QUAN TRỌNG: Chỉ cho phép Publish nếu đã được Approved
+        if (course.approvalStatus !== 'approved') {
+            return res.status(400).json({
+                success: false,
+                message: 'Course must be approved by Admin before publishing.'
+            });
+        }
+
+        // Toggle trạng thái
+        course.isPublished = !course.isPublished;
+        await course.save();
+
+        return res.json({
+            success: true,
+            message: `Course is now ${course.isPublished ? 'Published' : 'Unpublished'}.`,
+            isPublished: course.isPublished
+        });
+
+    } catch (error) {
+        console.error('Toggle Publish Error:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};

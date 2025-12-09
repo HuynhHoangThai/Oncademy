@@ -489,3 +489,49 @@ export const rejectCourse = async (req, res) => {
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
+
+export const toggleBanUser = async (req, res) => {
+    try {
+        const { userId, isBanned, banReason } = req.body;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        user.isAccountBanned = isBanned;
+        user.banReason = isBanned ? (banReason || 'Violation of Terms') : '';
+        await user.save();
+
+        try {
+            if (isBanned) {
+                await clerkClient.users.banUser(userId);
+            } else {
+                await clerkClient.users.unbanUser(userId);
+            }
+        } catch (clerkError) {
+            console.error('Clerk Ban Error:', clerkError);
+        }
+
+        if (user.role === 'educator') {
+            if (isBanned) {await Course.updateMany(
+                    { educator: userId },
+                    { isPublished: false }
+                );
+            } else {
+                // Nếu Unban: Có thể giữ nguyên isPublished=false để họ tự publish lại
+                // Hoặc tự động publish lại (tùy bạn chọn). An toàn nhất là để họ tự làm.
+            }
+        }
+
+        const actionText = isBanned ? 'banned' : 'unbanned';
+        return res.json({
+            success: true,
+            message: `User has been ${actionText} successfully. Courses updated (if applicable).`
+        });
+
+    } catch (error) {
+        console.error('Toggle Ban Error:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
