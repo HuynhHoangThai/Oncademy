@@ -6,28 +6,6 @@ import { v2 as cloudinary } from 'cloudinary'
 import { getEducatorDashboard, syncEducatorDashboard } from '../utils/dashboardHelper.js'
 import { getUserId } from '../utils/authHelper.js'
 
-// export const updateRoleToEducator = async (req, res) => {
-//     try {
-//         const userId = getUserId(req);
-        
-//         if (!userId) {
-//             return res.json({ success: false, message: 'Unauthorized - No userId' });
-//         }
-
-//         await clerkClient.users.updateUserMetadata(userId, {
-//             publicMetadata: {
-//                 role: 'educator',
-//             },
-//         })
-
-//         res.json({ success: true, message: 'You can publish a course now' })
-
-//     } catch (error) {
-//         res.json({ success: false, message: error.message })
-//     }
-
-// }
-
 export const applyForEducator = async (req, res) => {
     try {
         const userId = getUserId(req);
@@ -52,6 +30,7 @@ export const applyForEducator = async (req, res) => {
         await clerkClient.users.updateUserMetadata(userId, {
             publicMetadata: {
                 applicationStatus: 'pending',
+                resume: resumeUrl
             },
         });
 

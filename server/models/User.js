@@ -29,7 +29,7 @@ const userSchema = new mongoose.Schema({
     },
     resume: {
         type: String,
-        default: ''
+        default: null
     }
 }, { timestamps: true });
 

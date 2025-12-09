@@ -100,7 +100,7 @@ const ApplyEducator = () => {
             if (responseData && responseData.success) { 
                 await user.reload();
 
-                toast.success('✅ Application has been submitted successfully! Please wait for Admin to review.');
+                toast.success('Application has been submitted successfully! Please wait for Admin to review.');
                 navigate('/');
             } else {
                 throw new Error(responseData?.message || 'Lỗi khi gửi đơn do server trả về.');

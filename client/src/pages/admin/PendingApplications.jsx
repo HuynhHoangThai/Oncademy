@@ -3,6 +3,14 @@ import { toast } from 'react-toastify';
 import api from '../../utils/api'; 
 import ConfirmationModal from '../../components/common/ConfirmationModal';
 
+const normalizeResumeUrl = (url) => {
+    if (!url) return '#';
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        return `https://${url}`;
+    }
+    return url;
+};
+
 const PendingApplications = () => {
     const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -94,7 +102,7 @@ const PendingApplications = () => {
                             </div>
                             <div className="flex space-x-3">
                                 <a
-                                    href={app.resume}
+                                    href={normalizeResumeUrl(app.resume)}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"

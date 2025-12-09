@@ -7,11 +7,21 @@ import { Purchase } from '../models/Purchase.js';
 export const getPendingEducatorApplications = async (req, res) => {
     try {
 
-        const pendingUsers = await User.find({ applicationStatus: 'pending' }).select('-enrolledCourses -password -__v');
+        const pendingUsers = await User.find({ applicationStatus: 'pending' })
+            .select('_id name email applicationStatus resume imageUrl')
+            .lean();
+        
+        const applications = pendingUsers.map(user => ({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            resume: user.resume || null, 
+            applicationStatus: user.applicationStatus,
+        }));
 
         return res.json({
             success: true,
-            applications: pendingUsers
+            applications: applications
         });
 
     } catch (error) {
