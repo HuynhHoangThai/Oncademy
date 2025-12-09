@@ -14,6 +14,7 @@ const normalizeResumeUrl = (url) => {
 const PendingApplications = () => {
     const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [rejectionReason, setRejectionReason] = useState('');
 
     const [modal, setModal] = useState({
         isOpen: false,
@@ -45,15 +46,22 @@ const PendingApplications = () => {
             action,
             user: { id: userId, name: userName }
         });
+        setRejectionReason('');
     };
 
     const closeModal = () => {
         setModal({ isOpen: false, action: null, user: { id: null, name: null } });
+        setRejectionReason('');
     };
 
     const executeAction = async () => {
         const { id: userId, name: userName } = modal.user;
         const { action } = modal;
+
+        if (action === 'reject' && !rejectionReason.trim()) {
+            toast.warn('Please provide a rejection reason.');
+            return; 
+        }
 
         closeModal(); 
 
@@ -62,7 +70,10 @@ const PendingApplications = () => {
                 await api.post('/api/admin/approve-educator', { userIdToApprove: userId });
                 toast.success(`${userName} has been successfully approved!`);
             } else if (action === 'reject') {
-                await api.post('/api/admin/reject-educator', { userIdToReject: userId });
+                await api.post('/api/admin/reject-educator', {
+                    userIdToReject: userId,
+                    rejectionReason: rejectionReason
+                });
                 toast.info(`${userName}'s application has been rejected.`);
             }
 
@@ -134,9 +145,31 @@ const PendingApplications = () => {
                 onClose={closeModal}
                 onConfirm={executeAction}
                 title={modal.action === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}
-                message={modal.action === 'approve'
-                    ? `Are you sure you want to approve ${modal.user.name} as an Educator? This action is final and grants them access to the Educator Dashboard.`
-                    : `Are you sure you want to reject ${modal.user.name}'s application? They will need to reapply to become an educator.`
+                message={
+                    <div className="flex flex-col gap-3">
+                        <p>
+                            {modal.action === 'approve'
+                                ? `Are you sure you want to approve ${modal.user.name}? They will gain Educator access.`
+                                : `Are you sure you want to reject ${modal.user.name}'s application?`
+                            }
+                        </p>
+
+                        {modal.action === 'reject' && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Reason for rejection:
+                                </label>
+                                <textarea
+                                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-sm"
+                                    rows="3"
+                                    placeholder="CV does not meet requirements..."
+                                    value={rejectionReason}
+                                    onChange={(e) => setRejectionReason(e.target.value)}
+                                    autoFocus
+                                ></textarea>
+                            </div>
+                        )}
+                    </div>
                 }
                 confirmText={modal.action === 'approve' ? 'Approve' : 'Reject'}
                 confirmColor={modal.action === 'approve' ? 'bg-green-600' : 'bg-red-500'}

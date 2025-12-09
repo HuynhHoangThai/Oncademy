@@ -71,7 +71,7 @@ export const approveEducator = async (req, res) => {
 
 export const rejectEducator = async (req, res) => {
     try {
-        const { userIdToReject } = req.body;
+        const { userIdToReject, rejectionReason } = req.body;
 
         if (!userIdToReject) {
             return res.status(400).json({ success: false, message: 'User ID is required for rejection.' });
@@ -80,7 +80,8 @@ export const rejectEducator = async (req, res) => {
         await clerkClient.users.updateUserMetadata(userIdToReject, {
             publicMetadata: {
                 applicationStatus: 'rejected',
-                resume: null
+                resume: null,
+                rejectionReason: rejectionReason || 'Application rejected by Admin.'
             },
         });
 
@@ -88,7 +89,8 @@ export const rejectEducator = async (req, res) => {
             userIdToReject,
             {
                 applicationStatus: 'rejected',
-                resume: null
+                resume: null,
+                rejectionReason: rejectionReason || 'Application rejected by Admin.'
             },
             { new: true }
         );
@@ -124,7 +126,7 @@ export const getUsersListByRole = async (req, res) => {
         const totalPages = Math.ceil(totalUsers / limitNumber);
 
         const users = await User.find(query)
-            .select('_id name email role imageUrl applicationStatus')
+            .select('_id name email role imageUrl applicationStatus createdAt')
             .sort({ createdAt: -1 }) 
             .skip((pageNumber - 1) * limitNumber)
             .limit(limitNumber);

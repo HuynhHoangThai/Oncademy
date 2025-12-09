@@ -39,6 +39,7 @@ const ApplyEducator = () => {
     }
 
     const applicationStatus = user.publicMetadata.applicationStatus || 'none';
+    const rejectionReason = user.publicMetadata.rejectionReason || 'No reason provided.';
 
     if (applicationStatus === 'pending') {
         return (
@@ -117,7 +118,35 @@ const ApplyEducator = () => {
 
     return (
         <div className="max-w-3xl mx-auto p-6 md:p-10 bg-white shadow-xl rounded-xl mt-10">
-            <h1 className="text-3xl font-extrabold text-gray-800 mb-6 border-b pb-2">Sign up to become an educator</h1>
+            <h1 className="text-3xl font-extrabold text-gray-800 mb-6 border-b pb-2">
+                {applicationStatus === 'rejected' ? 'Re-apply to become an Educator' : 'Sign up to become an educator'}
+            </h1>
+            {applicationStatus === 'rejected' && (
+                <div className="mb-8 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg shadow-sm animate-pulse-once">
+                    <div className="flex items-start">
+                        <div className="flex-shrink-0">
+                            {/* Icon Error */}
+                            <svg className="h-5 w-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                            </svg>
+                        </div>
+                        <div className="ml-3">
+                            <h3 className="text-sm font-bold text-red-800">
+                                Your previous application was rejected.
+                            </h3>
+                            <div className="mt-2 text-sm text-red-700">
+                                <p className="font-semibold">Admin Reason:</p>
+                                <p className="italic bg-white/50 p-2 rounded mt-1 border border-red-100">
+                                    "{rejectionReason || 'No specific reason provided.'}"
+                                </p>
+                            </div>
+                            <p className="mt-3 text-xs text-red-600 font-medium">
+                                Please update your CV and submit again below.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <p className="text-gray-600 mb-6">
                 To become a member, please upload your CV (resume). Admin will review the application and notify you of the results via email.
@@ -191,7 +220,7 @@ const ApplyEducator = () => {
                             Sending...
                         </div>
                     ) : (
-                        'Send CV & Apply'
+                            applicationStatus === 'rejected' ? 'Resubmit Application' : 'Send CV & Apply'
                     )}
                 </button>
             </form>
