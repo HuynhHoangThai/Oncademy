@@ -18,7 +18,7 @@ const AdminSidebar = () => {
     const navItems = [
         { name: 'Dashboard', path: '/admin', icon: '📊' },
         { name: 'Pending Applications', path: '/admin/applications', icon: '📝' },
-        { name: 'Manage Courses', path: '/admin/courses', icon: '📚' },
+        { name: 'Pending Courses', path: '/admin/courses/pending', icon: '📚' },
     ];
 
     const isActive = (path) => {

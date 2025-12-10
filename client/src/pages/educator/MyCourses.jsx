@@ -54,7 +54,7 @@ const MyCourses = () => {
       const { data } = await axios.get(`${backendUrl}/api/educator/courses`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      
+
       if (data.success) {
         setCourses(data.courses || [])
       }
@@ -73,7 +73,7 @@ const MyCourses = () => {
       const { data } = await axios.get(`${backendUrl}/api/quiz/stats/educator`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      
+
       if (data.success) {
         setQuizStats(data.stats)
       }
@@ -89,7 +89,7 @@ const MyCourses = () => {
       const { data } = await axios.get(`${backendUrl}/api/quiz/stats/student-attempts`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      
+
       if (data.success) {
         setStudentAttempts(data.studentAttempts || [])
       }
@@ -192,7 +192,7 @@ const MyCourses = () => {
 
       setUpdating(true)
       const token = await getToken()
-      
+
       const payload = {
         courseTitle: editForm.courseTitle,
         coursePrice: Number(editForm.coursePrice) || 0,
@@ -210,8 +210,8 @@ const MyCourses = () => {
       if (data.success) {
         toast.success('Course updated successfully')
         // Update course in list
-        setCourses(courses.map(c => 
-          c._id === editingCourse._id 
+        setCourses(courses.map(c =>
+          c._id === editingCourse._id
             ? { ...c, ...editForm, courseContent: chapters }
             : c
         ))
@@ -273,12 +273,12 @@ const MyCourses = () => {
   const handleAddLecture = () => {
     if (lectureForm.lectureTitle.trim() && currentChapterIndex !== null) {
       const updatedChapters = [...chapters]
-      
+
       // Đảm bảo chapterContent tồn tại
       if (!updatedChapters[currentChapterIndex].chapterContent) {
         updatedChapters[currentChapterIndex].chapterContent = []
       }
-      
+
       const newLecture = {
         lectureId: `lecture_${Date.now()}`,
         lectureTitle: lectureForm.lectureTitle.trim(),
@@ -322,7 +322,7 @@ const MyCourses = () => {
   const handleDeleteLecture = () => {
     if (currentChapterIndex !== null && deletingLectureIndex !== null) {
       const updatedChapters = [...chapters]
-      updatedChapters[currentChapterIndex].chapterContent = 
+      updatedChapters[currentChapterIndex].chapterContent =
         updatedChapters[currentChapterIndex].chapterContent.filter((_, index) => index !== deletingLectureIndex)
       setChapters(updatedChapters)
       setCurrentChapterIndex(null)
@@ -338,9 +338,9 @@ const MyCourses = () => {
       await fetchQuizStats()
       await fetchStudentAttempts()
     }
-    
+
     loadData()
-    
+
     // Auto-refresh khi tab visible và mỗi 5 phút
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -349,13 +349,13 @@ const MyCourses = () => {
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    
+
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible') {
         loadData()
       }
     }, 5 * 60 * 1000) // 5 minutes
-    
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       clearInterval(interval)
@@ -364,6 +364,33 @@ const MyCourses = () => {
   }, [])
 
   if (loading) return <Loading />
+
+  const handleTogglePublish = async (course) => {
+    if (course.approvalStatus !== 'approved') {
+      return toast.warn("Course must be approved by Admin before publishing.");
+    }
+
+    try {
+      const token = await getToken();
+      const { data } = await axios.post(
+        `${backendUrl}/api/educator/toggle-publish`,
+        { courseId: course._id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (data.success) {
+        toast.success(data.message);
+        setCourses(courses.map(c =>
+          c._id === course._id ? { ...c, isPublished: data.isPublished } : c
+        ));
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error("Publish toggle error:", error);
+      toast.error("Failed to update visibility.");
+    }
+  };
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 to-white flex flex-col items-center py-10 px-4 sm:px-6 lg:px-8">
@@ -374,11 +401,10 @@ const MyCourses = () => {
           <button
             onClick={syncDashboard}
             disabled={syncing}
-            className={`px-6 py-2.5 rounded-lg font-medium transition-all w-full sm:w-auto ${
-              syncing 
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg'
-            }`}
+            className={`px-6 py-2.5 rounded-lg font-medium transition-all w-full sm:w-auto ${syncing
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg'
+              }`}
           >
             {syncing ? (
               <span className="flex items-center justify-center gap-2">
@@ -415,11 +441,13 @@ const MyCourses = () => {
               <thead className="bg-blue-50 text-blue-700">
                 <tr>
                   <th className="px-4 py-3 font-semibold text-left">Course</th>
+                  <th className="px-4 py-3 font-semibold text-center">Status</th>
                   <th className="px-4 py-3 font-semibold text-center hidden md:table-cell">Price</th>
                   <th className="px-4 py-3 font-semibold text-center hidden sm:table-cell">Students</th>
                   <th className="px-4 py-3 font-semibold text-center hidden lg:table-cell">Quizzes</th>
                   <th className="px-4 py-3 font-semibold text-center hidden xl:table-cell">Published On</th>
                   <th className="px-4 py-3 font-semibold text-center">Actions</th>
+                  <th className="px-4 py-3 font-semibold text-center">Visibility</th>
                 </tr>
               </thead>
               <tbody className="text-gray-700">
@@ -429,18 +457,44 @@ const MyCourses = () => {
                   const discount = Number(course.discount || 0)
                   const finalPrice = price - (discount * price) / 100
                   const quizCount = course.quizCount || 0
-                  
+
                   return (
                     <tr key={course._id} className="border-b last:border-b-0 border-gray-100 hover:bg-blue-50 transition">
                       <td className="px-4 py-3 min-w-[220px]">
                         <div className="flex items-center gap-3 sm:gap-4">
-                          <img 
-                            src={course.courseThumbnail} 
+                          <img
+                            src={course.courseThumbnail}
                             alt={course.courseTitle}
-                            className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg object-cover border-2 border-blue-200 shadow flex-shrink-0" 
+                            className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg object-cover border-2 border-blue-200 shadow flex-shrink-0"
                           />
                           <span className="truncate font-semibold text-sm sm:text-base lg:text-lg">{course.courseTitle}</span>
                         </div>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {course.isPublished ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                            Published
+                          </span>
+                        ) : course.approvalStatus === 'rejected' ? (
+                          <div className="flex flex-col items-center">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200 mb-1">
+                              Rejected
+                            </span>
+                            {/* Hiển thị lý do từ chối nếu có (Tooltip khi hover) */}
+                            {course.rejectionReason && (
+                              <div className="group relative cursor-help">
+                                <span className="text-[14px] text-red-600 underline decoration-dotted">Why?</span>
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 p-2 bg-gray-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                                  {course.rejectionReason}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
+                            Pending
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-center font-medium hidden md:table-cell">
                         {discount > 0 ? (
@@ -459,7 +513,7 @@ const MyCourses = () => {
                       </td>
                       <td className="px-4 py-3 text-center hidden lg:table-cell">
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
-                          {quizCount} Quizzes
+                          {quizCount}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center text-gray-500 text-xs sm:text-sm hidden xl:table-cell">
@@ -488,6 +542,25 @@ const MyCourses = () => {
                             <span className="hidden sm:inline">Delete</span>
                           </button>
                         </div>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {course.approvalStatus === 'approved' ? (
+                          <button
+                            onClick={() => handleTogglePublish(course)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${course.isPublished ? 'bg-green-600' : 'bg-gray-300'
+                              }`}
+                            title={course.isPublished ? "Click to Unpublish" : "Click to Publish"}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${course.isPublished ? 'translate-x-6' : 'translate-x-1'
+                                }`}
+                            />
+                          </button>
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">
+                            {course.approvalStatus === 'pending' ? 'Reviewing' : 'Restricted'}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   )
@@ -545,15 +618,15 @@ const MyCourses = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {studentAttempts.slice(0, showStudentDetails ? undefined : 6).map((student) => (
-                <div 
-                  key={student.studentId} 
+                <div
+                  key={student.studentId}
                   className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-200 hover:shadow-lg transition-shadow"
                 >
                   {/* Student Header */}
                   <div className="flex items-center gap-3 mb-4">
                     {student.studentImage ? (
-                      <img 
-                        src={student.studentImage} 
+                      <img
+                        src={student.studentImage}
                         alt={student.studentName}
                         className="w-12 h-12 rounded-full border-2 border-blue-300 object-cover"
                       />
@@ -595,12 +668,11 @@ const MyCourses = () => {
                       <span className="text-xs font-semibold text-gray-700">{student.avgScore.toFixed(0)}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full transition-all ${
-                          student.avgScore >= 80 ? 'bg-green-500' :
+                      <div
+                        className={`h-2 rounded-full transition-all ${student.avgScore >= 80 ? 'bg-green-500' :
                           student.avgScore >= 60 ? 'bg-blue-500' :
-                          student.avgScore >= 40 ? 'bg-yellow-500' : 'bg-red-500'
-                        }`}
+                            student.avgScore >= 40 ? 'bg-yellow-500' : 'bg-red-500'
+                          }`}
                         style={{ width: `${Math.min(student.avgScore, 100)}%` }}
                       />
                     </div>
@@ -622,19 +694,17 @@ const MyCourses = () => {
                           <div key={attempt.attemptId} className="bg-white rounded-lg p-2 text-xs">
                             <div className="flex justify-between items-start mb-1">
                               <span className="font-medium text-gray-700 truncate flex-1">{attempt.quizTitle}</span>
-                              <span className={`ml-2 font-bold ${
-                                attempt.score >= 80 ? 'text-green-600' :
+                              <span className={`ml-2 font-bold ${attempt.score >= 80 ? 'text-green-600' :
                                 attempt.score >= 60 ? 'text-blue-600' :
-                                attempt.score >= 40 ? 'text-yellow-600' : 'text-red-600'
-                              }`}>
+                                  attempt.score >= 40 ? 'text-yellow-600' : 'text-red-600'
+                                }`}>
                                 {attempt.score.toFixed(0)}%
                               </span>
                             </div>
                             <div className="flex justify-between items-center text-gray-500">
                               <span>{new Date(attempt.submittedAt).toLocaleDateString()}</span>
-                              <span className={`px-2 py-0.5 rounded ${
-                                attempt.passed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                              }`}>
+                              <span className={`px-2 py-0.5 rounded ${attempt.passed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                }`}>
                                 {attempt.passed ? 'Passed' : 'Failed'}
                               </span>
                             </div>
@@ -673,7 +743,7 @@ const MyCourses = () => {
               </div>
               <h2 className="text-xl font-bold text-gray-800">Delete Course</h2>
             </div>
-            
+
             <div className="mb-6">
               <p className="text-gray-600 mb-3">Are you sure you want to delete this course?</p>
               <div className="bg-red-50 border border-red-200 rounded-lg p-3">
@@ -743,16 +813,15 @@ const MyCourses = () => {
                 </svg>
               </button>
             </div>
-            
+
             {/* Tabs */}
             <div className="flex border-b border-gray-200 mb-6">
               <button
                 onClick={() => setActiveTab('course')}
-                className={`flex-1 px-4 py-3 text-sm font-semibold transition-colors ${
-                  activeTab === 'course'
-                    ? 'text-blue-600 border-b-2 border-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
+                className={`flex-1 px-4 py-3 text-sm font-semibold transition-colors ${activeTab === 'course'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-500 hover:text-gray-700'
+                  }`}
               >
                 <div className="flex items-center justify-center gap-2">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -763,11 +832,10 @@ const MyCourses = () => {
               </button>
               <button
                 onClick={() => setActiveTab('chapters')}
-                className={`flex-1 px-4 py-3 text-sm font-semibold transition-colors ${
-                  activeTab === 'chapters'
-                    ? 'text-blue-600 border-b-2 border-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
+                className={`flex-1 px-4 py-3 text-sm font-semibold transition-colors ${activeTab === 'chapters'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-500 hover:text-gray-700'
+                  }`}
               >
                 <div className="flex items-center justify-center gap-2">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -853,15 +921,15 @@ const MyCourses = () => {
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                     <p className="text-xs font-semibold text-gray-600 mb-2">Current Course Info:</p>
                     <div className="flex items-center gap-3 mb-2">
-                      <img 
-                        src={editingCourse.courseThumbnail} 
+                      <img
+                        src={editingCourse.courseThumbnail}
                         alt={editingCourse.courseTitle}
                         className="w-16 h-16 rounded-lg object-cover border-2 border-gray-300"
                       />
                       <div className="flex-1">
                         <p className="text-sm font-semibold text-gray-800">{editingCourse.courseTitle}</p>
                         <p className="text-xs text-gray-600">
-                          {editingCourse.courseContent?.length || 0} chapters • 
+                          {editingCourse.courseContent?.length || 0} chapters •
                           {editingCourse.enrolledStudents?.length || 0} students enrolled
                         </p>
                       </div>
@@ -1132,7 +1200,7 @@ const MyCourses = () => {
               <h3 className="text-lg font-bold text-gray-800">Delete Chapter</h3>
             </div>
             <p className="text-gray-600 mb-4">
-              Are you sure you want to delete "{chapters[deletingChapterIndex]?.chapterTitle}"? 
+              Are you sure you want to delete "{chapters[deletingChapterIndex]?.chapterTitle}"?
               This will also delete all {chapters[deletingChapterIndex]?.chapterContent?.length || 0} lecture(s) in this chapter.
             </p>
             <p className="text-red-600 text-sm mb-4 font-medium">⚠️ This action cannot be undone!</p>
@@ -1194,9 +1262,9 @@ const MyCourses = () => {
             </div>
             <div className="flex gap-3 mt-4">
               <button
-                onClick={() => { 
-                  setShowAddLectureDialog(false); 
-                  setCurrentChapterIndex(null); 
+                onClick={() => {
+                  setShowAddLectureDialog(false);
+                  setCurrentChapterIndex(null);
                   setLectureForm({ lectureTitle: '', lectureDuration: 0, lectureUrl: '', isPreviewFree: false });
                 }}
                 className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg"
@@ -1254,9 +1322,9 @@ const MyCourses = () => {
             </div>
             <div className="flex gap-3 mt-4">
               <button
-                onClick={() => { 
-                  setShowEditLectureDialog(false); 
-                  setCurrentChapterIndex(null); 
+                onClick={() => {
+                  setShowEditLectureDialog(false);
+                  setCurrentChapterIndex(null);
                   setEditingLectureIndex(null);
                   setLectureForm({ lectureTitle: '', lectureDuration: 0, lectureUrl: '', isPreviewFree: false });
                 }}
@@ -1293,10 +1361,10 @@ const MyCourses = () => {
             <p className="text-red-600 text-sm mb-4 font-medium">⚠️ This action cannot be undone!</p>
             <div className="flex gap-3">
               <button
-                onClick={() => { 
-                  setShowDeleteLectureDialog(false); 
-                  setCurrentChapterIndex(null); 
-                  setDeletingLectureIndex(null); 
+                onClick={() => {
+                  setShowDeleteLectureDialog(false);
+                  setCurrentChapterIndex(null);
+                  setDeletingLectureIndex(null);
                 }}
                 className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg"
               >

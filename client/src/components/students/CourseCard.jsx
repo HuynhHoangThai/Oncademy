@@ -2,6 +2,7 @@ import { useContext, useMemo, memo } from 'react'
 import { Link } from 'react-router-dom'
 import { assets } from '../../assets/assets'
 import { AppContext } from '../../context/AppContext'
+import { useUser, useClerk } from '@clerk/clerk-react'
 
 const CourseCard = memo(({course}) => {
   const { currency, calculateRating, ratingUpdateTrigger, getTotalReviewCount, toggleFavoriteCourse, isCourseFavorite, addToViewHistory, favoriteCourses } = useContext(AppContext);
@@ -11,8 +12,15 @@ const CourseCard = memo(({course}) => {
   const reviewCount = useMemo(() => getTotalReviewCount(course), [course, ratingUpdateTrigger]);
   const isFavorite = useMemo(() => isCourseFavorite(course._id), [course._id, favoriteCourses]);
   
+  const { user } = useUser();
+  const { openSignIn } = useClerk();
+
   const handleFavoriteClick = (e) => {
     e.preventDefault();
+    if (!user) {
+      openSignIn(); 
+      return;
+    }
     toggleFavoriteCourse(course._id);
   };
 

@@ -42,6 +42,12 @@ const UserTable = ({ users, totalPages, currentPage, onPageChange, handleDemote 
                                         >
                                             {user.name}
                                         </Link>
+
+                                        {user.isAccountBanned && (
+                                            <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 border border-red-200">
+                                                BANNED
+                                            </span>
+                                        )}
                                         <div className="text-sm text-gray-500">{user.email}</div>
                                     </div>
                                 </div>
