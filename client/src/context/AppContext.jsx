@@ -208,10 +208,77 @@ const AppProvider = (props) => {
     // View history logic
     const [viewHistory, setViewHistory] = useState([]);
 
+    const fetchFavoritesFromDB = async () => {
+        if (!user) return;
+        try {
+            const token = await getToken();
+            const { data } = await axios.get(`${backendUrl}/api/user/favorites`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (data.success) {
+                setFavoriteCourses(data.favorites || []);
+                localStorage.setItem(getFavoriteKey(), JSON.stringify(data.favorites || []));
+            }
+        } catch (error) {
+            console.error("Failed to fetch DB favorites:", error);
+            const key = getFavoriteKey();
+            const saved = localStorage.getItem(key);
+            setFavoriteCourses(saved ? JSON.parse(saved) : []);
+        }
+    };
+
+    const toggleFavoriteCourse = async (courseId) => {
+
+        if (!user) {
+            let updated;
+            if (favoriteCourses.includes(courseId)) {
+                updated = favoriteCourses.filter(id => id !== courseId);
+            } else {
+                updated = [...favoriteCourses, courseId];
+            }
+            setFavoriteCourses(updated);
+            localStorage.setItem(getFavoriteKey(), JSON.stringify(updated));
+            toast.success(favoriteCourses.includes(courseId) ? "Removed from favorites (Local)." : "Added to favorites (Local).");
+            return;
+        }
+
+        try {
+            const token = await getToken();
+            const response = await axios.post(
+                `${backendUrl}/api/user/toggle-favorite`,
+                { courseId },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.success) {
+                setFavoriteCourses(response.data.favorites);
+                toast.success(response.data.message);
+
+                localStorage.setItem(getFavoriteKey(), JSON.stringify(response.data.favorites));
+            } else {
+                toast.error(response.data.message);
+            }
+        } catch (error) {
+            console.error("Failed to toggle favorites:", error);
+            toast.error('Failed to update favorite status on server.');
+        }
+    };
+
     useEffect(() => {
-        const key = user ? `favoriteCourses_${user.id}` : 'favoriteCourses_guest';
-        const saved = localStorage.getItem(key);
-        setFavoriteCourses(saved ? JSON.parse(saved) : []);
+        if (user) {
+            fetchUserData();
+            fetchUserEnrolledCourses();
+            fetchFavoritesFromDB();
+
+        } else {
+            setIsEducator(false);
+            setUserData(null);
+            setEnrolledCourses([]);
+
+            const key = getFavoriteKey();
+            const saved = localStorage.getItem(key);
+            setFavoriteCourses(saved ? JSON.parse(saved) : []);
+        }
     }, [user]);
 
     useEffect(() => {
@@ -219,17 +286,6 @@ const AppProvider = (props) => {
         const saved = localStorage.getItem(key);
         setViewHistory(saved ? JSON.parse(saved) : []);
     }, [user]);
-
-    const toggleFavoriteCourse = (courseId) => {
-        let updated;
-        if (favoriteCourses.includes(courseId)) {
-            updated = favoriteCourses.filter(id => id !== courseId);
-        } else {
-            updated = [...favoriteCourses, courseId];
-        }
-        setFavoriteCourses(updated);
-        localStorage.setItem(getFavoriteKey(), JSON.stringify(updated));
-    };
 
     const isCourseFavorite = (courseId) => favoriteCourses.includes(courseId);
 

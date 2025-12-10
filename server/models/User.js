@@ -29,6 +29,22 @@ const userSchema = new mongoose.Schema({
     },
     resume: {
         type: String,
+        default: null
+    },
+    favoriteCourses: [{
+        type: String, 
+        required: false
+    }],
+    rejectionReason: {
+        type: String,
+        default: ''
+    },
+    isAccountBanned: {
+        type: Boolean,
+        default: false
+    },
+    banReason: {
+        type: String,
         default: ''
     }
 }, { timestamps: true });

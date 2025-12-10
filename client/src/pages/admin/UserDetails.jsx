@@ -16,6 +16,9 @@ const UserDetails = () => {
     // 💡 STATE CHO MODAL HẠ CẤP
     const [isDemoteModalOpen, setIsDemoteModalOpen] = useState(false);
 
+    const [isBanModalOpen, setIsBanModalOpen] = useState(false);
+    const [banReason, setBanReason] = useState('');
+
 
     const fetchDetails = async () => {
         setLoading(true);
@@ -62,6 +65,35 @@ const UserDetails = () => {
         }
     };
 
+    const handleToggleBan = async () => {
+        setIsBanModalOpen(false);
+
+        const willBan = !user.isAccountBanned;
+
+        try {
+            const response = await api.post('/api/admin/ban-user', {
+                userId: user._id,
+                isBanned: willBan,
+                banReason: willBan ? banReason : ''
+            });
+
+            if (response.success) {
+                toast.success(response.message);
+
+                setUser(prev => ({
+                    ...prev,
+                    isAccountBanned: willBan,
+                    banReason: willBan ? banReason : ''
+                }));
+            } else {
+                toast.error(response.message);
+            }
+        } catch (error) {
+            console.error('Ban error:', error);
+            toast.error('Action failed.');
+        }
+    };
+
 
     if (loading) {
         return <div className="py-10 text-center"><LoadingSpinner size="h-10 w-10" /></div>;
@@ -90,10 +122,15 @@ const UserDetails = () => {
                     <span className={`ml-3 text-sm font-semibold p-2 rounded-full ${isEducator ? 'bg-indigo-100 text-indigo-800' : 'bg-green-100 text-green-800'}`}>
                         {user.role.toUpperCase()}
                     </span>
+                    {user.isAccountBanned && (
+                        <span className="bg-red-600 text-white text-xs font-bold px-3 py-1 rounded shadow-sm animate-pulse">
+                            BANNED
+                        </span>
+                    )}
                 </h1>
 
                 {/* 💡 NÚT HẠ CẤP CHO EDUCATOR */}
-                {isEducator && (
+                {isEducator && !user.isAccountBanned && (
                     <button
                         onClick={() => setIsDemoteModalOpen(true)}
                         className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium shadow-md"
@@ -101,7 +138,30 @@ const UserDetails = () => {
                         Demote to Student
                     </button>
                 )}
+
+                <button
+                    onClick={() => {
+                        setBanReason(''); 
+                        setIsBanModalOpen(true);
+                    }}
+                    className={`px-4 py-2 text-sm text-white rounded-lg transition font-medium shadow-md ${user.isAccountBanned
+                            ? 'bg-green-600 hover:bg-green-700'
+                            : 'bg-gray-800 hover:bg-black'     
+                        }`}
+                >
+                    {user.isAccountBanned ? 'Unban User' : 'Ban Account'}
+                </button>
             </div>
+
+            {user.isAccountBanned && (
+                <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r text-red-800">
+                    <div className="flex items-center gap-2 mb-1">
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                        <span className="font-bold">Account Suspended</span>
+                    </div>
+                    <p className="text-sm ml-7">Reason: <span className="italic">"{user.banReason || 'No reason provided'}"</span></p>
+                </div>
+            )}
 
             {/* --- Thông tin cơ bản --- */}
             <div className="grid grid-cols-2 gap-4 border-b pb-4 mb-4">
@@ -161,6 +221,48 @@ const UserDetails = () => {
                 message={`Are you sure you want to demote ${user.name} back to the Student role? This action will revoke their Educator privileges and they will be listed as a Student.`}
                 confirmText="Demote"
                 confirmColor="bg-red-600"
+            />
+
+            <ConfirmationModal
+                isOpen={isBanModalOpen}
+                onClose={() => setIsBanModalOpen(false)}
+                onConfirm={handleToggleBan}
+                title={user.isAccountBanned ? 'Unban User' : 'Ban User'}
+                confirmText={user.isAccountBanned ? 'Unban' : 'Ban User'}
+                confirmColor={user.isAccountBanned ? 'bg-green-600' : 'bg-gray-800'}
+                message={
+                    <div>
+                        <p className="mb-3 text-gray-600">
+                            {user.isAccountBanned
+                                ? `Are you sure you want to unban ${user.name}? They will regain access to their account immediately.`
+                                : `Are you sure you want to ban ${user.name}? They will lose access immediately.`
+                            }
+                        </p>
+
+                        {/* Chỉ hiện ô nhập lý do khi thực hiện BAN */}
+                        {!user.isAccountBanned && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Reason for banning:
+                                </label>
+                                <textarea
+                                    className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-gray-500 outline-none"
+                                    rows="3"
+                                    placeholder="e.g. Spamming comments, Payment fraud..."
+                                    value={banReason}
+                                    onChange={(e) => setBanReason(e.target.value)}
+                                    autoFocus
+                                ></textarea>
+
+                                {isEducator && (
+                                    <p className="text-xs text-red-500 mt-2 font-medium">
+                                        * Warning: All courses by this educator will be unpublished.
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                }
             />
         </div>
     );

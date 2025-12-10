@@ -306,3 +306,68 @@ export const addUserRating = async (req, res) => {
         return res.json({ success: false, message: error.message });
     }
 };
+
+export const getUserFavorites = async (req, res) => {
+    try {
+        const userId = getUserId(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, message: 'Authentication required.' });
+        }
+
+        const user = await User.findById(userId).select('favoriteCourses');
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        return res.json({
+            success: true,
+            favorites: user.favoriteCourses || [] 
+        });
+
+    } catch (error) {
+        console.error('Fetch Favorites Error:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error.' });
+    }
+};
+
+export const toggleFavoriteCourse = async (req, res) => {
+    try {
+        const userId = getUserId(req);
+        const { courseId } = req.body;
+
+        if (!userId || !courseId) {
+            return res.status(400).json({ success: false, message: 'Missing required fields.' });
+        }
+
+        let updateAction;
+        let message;
+
+        const user = await User.findById(userId).select('favoriteCourses');
+        const isFavorited = user.favoriteCourses.includes(courseId);
+
+        if (isFavorited) {
+            updateAction = { $pull: { favoriteCourses: courseId } };
+            message = 'Course removed from favorites.';
+        } else {
+            updateAction = { $addToSet: { favoriteCourses: courseId } }; 
+            message = 'Course added to favorites.';
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            updateAction,
+            { new: true }
+        ).select('favoriteCourses');
+
+        return res.json({
+            success: true,
+            message: message,
+            favorites: updatedUser.favoriteCourses 
+        });
+
+    } catch (error) {
+        console.error('Toggle Favorite Error:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error.' });
+    }
+};

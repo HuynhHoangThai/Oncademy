@@ -7,6 +7,7 @@ import axios from 'axios'
 import { useAuth } from '@clerk/clerk-react'
 import { toast } from 'react-toastify'
 import { useNavigate } from 'react-router-dom'
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 const AddCourse = () => {
   const quillRef = useRef(null);
@@ -126,7 +127,7 @@ const AddCourse = () => {
       })
 
       if (data.success) {
-        toast.success('Course created successfully')
+        toast.success(data.message || 'Course submitted for review! Please wait for approval.');
         // reset form
         setCourseTitle('')
         setCourseDescription('')

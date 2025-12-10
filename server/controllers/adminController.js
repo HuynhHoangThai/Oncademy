@@ -8,11 +8,21 @@ import { sendEducatorApprovalEmail, sendEducatorRejectionEmail } from '../utils/
 export const getPendingEducatorApplications = async (req, res) => {
     try {
 
-        const pendingUsers = await User.find({ applicationStatus: 'pending' }).select('-enrolledCourses -password -__v');
+        const pendingUsers = await User.find({ applicationStatus: 'pending' })
+            .select('_id name email applicationStatus resume imageUrl')
+            .lean();
+
+        const applications = pendingUsers.map(user => ({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            resume: user.resume || null,
+            applicationStatus: user.applicationStatus,
+        }));
 
         return res.json({
             success: true,
-            applications: pendingUsers
+            applications: applications
         });
 
     } catch (error) {
@@ -74,7 +84,7 @@ export const approveEducator = async (req, res) => {
 
 export const rejectEducator = async (req, res) => {
     try {
-        const { userIdToReject } = req.body;
+        const { userIdToReject, rejectionReason } = req.body;
 
         if (!userIdToReject) {
             return res.status(400).json({ success: false, message: 'User ID is required for rejection.' });
@@ -83,6 +93,8 @@ export const rejectEducator = async (req, res) => {
         await clerkClient.users.updateUserMetadata(userIdToReject, {
             publicMetadata: {
                 applicationStatus: 'rejected',
+                resume: null,
+                rejectionReason: rejectionReason || 'Application rejected by Admin.'
             },
         });
 
@@ -90,6 +102,8 @@ export const rejectEducator = async (req, res) => {
             userIdToReject,
             {
                 applicationStatus: 'rejected',
+                resume: null,
+                rejectionReason: rejectionReason || 'Application rejected by Admin.'
             },
             { new: true }
         );
@@ -137,7 +151,7 @@ export const getUsersListByRole = async (req, res) => {
         const totalPages = Math.ceil(totalUsers / limitNumber);
 
         const users = await User.find(query)
-            .select('_id name email role imageUrl applicationStatus')
+            .select('_id name email role imageUrl applicationStatus createdAt')
             .sort({ createdAt: -1 })
             .skip((pageNumber - 1) * limitNumber)
             .limit(limitNumber);
@@ -431,5 +445,119 @@ export const getRevenueTrend = async (req, res) => {
     } catch (error) {
         console.error('Get Revenue Trend Error:', error);
         return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+export const getPendingCourses = async (req, res) => {
+    try {
+        const pendingCourses = await Course.find({ approvalStatus: 'pending' })
+            .populate('educator', 'name email imageUrl')
+            .sort({ createdAt: 1 })
+            .lean();
+
+        return res.json({ success: true, courses: pendingCourses });
+    } catch (error) {
+        console.error('Get Pending Courses Error:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+export const approveCourse = async (req, res) => {
+    try {
+        const adminId = getUserId(req);
+        const { courseId } = req.body;
+
+        const updatedCourse = await Course.findByIdAndUpdate(
+            courseId,
+            {
+                approvalStatus: 'approved',
+                isPublished: true,
+                approvedBy: adminId
+            },
+            { new: true }
+        );
+
+        if (!updatedCourse) {
+            return res.status(404).json({ success: false, message: 'Course not found.' });
+        }
+
+        return res.json({ success: true, message: 'Course approved and published.', course: updatedCourse });
+    } catch (error) {
+        console.error('Approve Course Error:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+export const rejectCourse = async (req, res) => {
+    try {
+        const adminId = getUserId(req);
+        const { courseId, rejectionReason } = req.body;
+
+        const updatedCourse = await Course.findByIdAndUpdate(
+            courseId,
+            {
+                approvalStatus: 'rejected',
+                isPublished: false,
+                approvedBy: adminId,
+                rejectionReason: rejectionReason || ''
+            },
+            { new: true }
+        );
+
+        if (!updatedCourse) {
+            return res.status(404).json({ success: false, message: 'Course not found.' });
+        }
+
+        return res.json({ success: true, message: 'Course rejected.', course: updatedCourse });
+    } catch (error) {
+        console.error('Reject Course Error:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+export const toggleBanUser = async (req, res) => {
+    try {
+        const { userId, isBanned, banReason } = req.body;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        user.isAccountBanned = isBanned;
+        user.banReason = isBanned ? (banReason || 'Violation of Terms') : '';
+        await user.save();
+
+        try {
+            if (isBanned) {
+                await clerkClient.users.banUser(userId);
+            } else {
+                await clerkClient.users.unbanUser(userId);
+            }
+        } catch (clerkError) {
+            console.error('Clerk Ban Error:', clerkError);
+        }
+
+        if (user.role === 'educator') {
+            if (isBanned) {
+                await Course.updateMany(
+                    { educator: userId },
+                    { isPublished: false }
+                );
+            } else {
+                // Nếu Unban: Có thể giữ nguyên isPublished=false để họ tự publish lại
+                // Hoặc tự động publish lại (tùy bạn chọn). An toàn nhất là để họ tự làm.
+            }
+        }
+
+        const actionText = isBanned ? 'banned' : 'unbanned';
+        return res.json({
+            success: true,
+            message: `User has been ${actionText} successfully. Courses updated (if applicable).`
+        });
+
+    } catch (error) {
+        console.error('Toggle Ban Error:', error);
+        return res.status(500).json({ success: false, message: error.message });
     }
 };

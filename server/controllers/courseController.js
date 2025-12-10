@@ -118,6 +118,11 @@ export const deleteCourse = async (req, res) => {
             { $set: { status: 'refunded' } }
         )
 
+        await User.updateMany(
+            { favoriteCourses: id },
+            { $pull: { favoriteCourses: id } }
+        );
+
         // Delete the course
         await Course.findByIdAndDelete(id)
 
@@ -157,6 +162,12 @@ export const updateCourse = async (req, res) => {
 
         // Parse course data
         const parsedCourseData = JSON.parse(courseData)
+
+        if (course.approvalStatus === 'rejected') {
+            parsedCourseData.approvalStatus = 'pending';
+            parsedCourseData.isPublished = false;
+            parsedCourseData.rejectionReason = ''; 
+        }
 
         // Upload new thumbnail if provided
         if (imageFile) {
