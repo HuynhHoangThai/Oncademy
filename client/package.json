@@ -21,6 +21,7 @@
     "axios": "^1.13.2",
     "dayjs": "^1.11.19",
     "humanize-duration": "^3.33.0",
+    "lucide-react": "^0.559.0",
     "quill": "^2.0.3",
     "rc-progress": "^4.0.0",
     "react": "^19.1.0",

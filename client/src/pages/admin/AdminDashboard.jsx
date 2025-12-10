@@ -5,7 +5,8 @@ import { toast } from 'react-toastify';
 import api from '../../utils/api';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import KpiCard from '../../components/admin/KpiCard';
-import RecentEnrollmentsTable from '../../components/admin/RecentEnrollmentsTable'; // 💡 IMPORT MỚI
+import RecentEnrollmentsTable from '../../components/admin/RecentEnrollmentsTable';
+import { DollarSign, GraduationCap, BookOpen, ShoppingCart } from 'lucide-react';
 
 import CourseStatusPieChart from '../../components/admin/charts/CourseStatusPieChart';
 import RevenueTrendContainer from '../../components/admin/charts/RevenueTrendContainer';
@@ -42,10 +43,10 @@ const AdminDashboard = () => {
     }
 
     const kpiData = [
-        { title: "Total Earnings", value: `$${stats.totalEarnings.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, icon: '💰', color: 'bg-green-100 text-green-700' },
-        { title: "Total Enrollments", value: stats.totalEnrollments.toLocaleString(), icon: '🎓', color: 'bg-blue-100 text-blue-700' },
-        { title: "Total Courses", value: stats.totalCourses.toLocaleString(), icon: '📚', color: 'bg-indigo-100 text-indigo-700' },
-        { title: "Total Purchases", value: stats.totalPurchases.toLocaleString(), icon: '🛒', color: 'bg-yellow-100 text-yellow-700' },
+        { title: "Total Earnings", value: `$${stats.totalEarnings.toLocaleString('en-US', { minimumFractionDigits: 2 })} `, icon: DollarSign, color: 'bg-green-100 text-green-700' },
+        { title: "Total Enrollments", value: stats.totalEnrollments.toLocaleString(), icon: GraduationCap, color: 'bg-blue-100 text-blue-700' },
+        { title: "Total Courses", value: stats.totalCourses.toLocaleString(), icon: BookOpen, color: 'bg-indigo-100 text-indigo-700' },
+        { title: "Total Purchases", value: stats.totalPurchases.toLocaleString(), icon: ShoppingCart, color: 'bg-yellow-100 text-yellow-700' },
     ];
 
     return (

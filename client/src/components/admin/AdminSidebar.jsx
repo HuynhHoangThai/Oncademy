@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { UserButton } from '@clerk/clerk-react';
 import { FaChevronDown, FaChevronUp, FaChalkboardTeacher, FaUserGraduate } from 'react-icons/fa';
+import { BarChart3, FileText, BookOpen, Users } from 'lucide-react';
 import { useState } from 'react';
 
 const AdminSidebar = () => {
@@ -16,9 +17,9 @@ const AdminSidebar = () => {
     };
 
     const navItems = [
-        { name: 'Dashboard', path: '/admin', icon: '📊' },
-        { name: 'Pending Applications', path: '/admin/applications', icon: '📝' },
-        { name: 'Pending Courses', path: '/admin/courses/pending', icon: '📚' },
+        { name: 'Dashboard', path: '/admin', icon: BarChart3 },
+        { name: 'Pending Applications', path: '/admin/applications', icon: FileText },
+        { name: 'Pending Courses', path: '/admin/courses/pending', icon: BookOpen },
     ];
 
     const isActive = (path) => {
@@ -39,7 +40,7 @@ const AdminSidebar = () => {
                         className={`flex items-center p-2 rounded-lg transition duration-200 ${isActive(item.path) && item.path !== '/admin/users' ? 'bg-blue-600' : 'hover:bg-gray-700'
                             }`}
                     >
-                        <span className="mr-3">{item.icon}</span>
+                        <item.icon className="mr-3" size={20} />
                         {item.name}
                     </Link>
                 ))}
@@ -52,7 +53,7 @@ const AdminSidebar = () => {
                             }`}
                     >
                         <span className="flex items-center">
-                            <span className="mr-3">👥</span>
+                            <Users className="mr-3" size={20} />
                             Manage Users
                         </span>
                         {isUsersDropdownOpen ? <FaChevronUp className="w-3 h-3" /> : <FaChevronDown className="w-3 h-3" />}
