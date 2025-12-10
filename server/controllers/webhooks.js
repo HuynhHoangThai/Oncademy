@@ -4,6 +4,7 @@ import stripe from "stripe";
 import { Purchase } from "../models/Purchase.js";
 import Course from "../models/Course.js";
 import { syncEducatorDashboard } from "../utils/dashboardHelper.js";
+import { sendCourseEnrollmentEmail } from "../utils/emailService.js";
 
 // API Controller Function to Manage Clerk User with database
 export const clerkWebhooks = async (req, res) => {
@@ -78,8 +79,8 @@ export const clerkWebhooks = async (req, res) => {
 }
 const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
 
-export const  stripeWebhooks = async (request, response) => {
-   const sig = request.headers['stripe-signature'];
+export const stripeWebhooks = async (request, response) => {
+  const sig = request.headers['stripe-signature'];
 
   let event;
 
@@ -97,31 +98,45 @@ export const  stripeWebhooks = async (request, response) => {
       const session = await stripeInstance.checkout.sessions.list({
         payment_intent: paymentIntentId,
       });
-      const {purchaseId} = session.data[0].metadata;
-      
+      const { purchaseId } = session.data[0].metadata;
+
       const purchaseData = await Purchase.findById(purchaseId);
       const userData = await User.findById(purchaseData.userId);
       const courseData = await Course.findById(purchaseData.courseId.toString());
-      
+
       // Check if student is already enrolled to prevent duplicates
       const isAlreadyEnrolled = courseData.enrolledStudents.some(
         studentId => studentId.toString() === userData._id.toString()
       );
-      
+
       if (!isAlreadyEnrolled) {
         courseData.enrolledStudents.push(userData._id);
         await courseData.save();
-        
+
         userData.enrolledCourses.push(courseData._id);
         await userData.save();
-        
+
         console.log(`✅ Student ${userData.name} enrolled in course ${courseData.courseTitle}`);
       } else {
         console.log(`ℹ️ Student ${userData.name} already enrolled in course ${courseData.courseTitle}`);
       }
-      
+
       purchaseData.status = 'completed';
       await purchaseData.save();
+
+      // 📧 Send enrollment confirmation email
+      try {
+        await sendCourseEnrollmentEmail({
+          userEmail: userData.email,
+          userName: userData.name,
+          courseTitle: courseData.courseTitle,
+          courseId: courseData._id.toString()
+        });
+        console.log(`📧 Enrollment email sent to ${userData.email}`);
+      } catch (emailError) {
+        console.error('📧 Failed to send enrollment email:', emailError);
+        // Don't fail the webhook if email fails - just log the error
+      }
 
       // Sync educator dashboard after successful purchase
       const educatorId = courseData.educator;
@@ -130,18 +145,19 @@ export const  stripeWebhooks = async (request, response) => {
       });
 
       break;
-    
-      case 'payment_intent.payment_failed':{
-        const paymentIntent = event.data.object;
-        const paymentIntentId = paymentIntent.id;
-        const session = await stripeInstance.checkout.sessions.list({
+
+    case 'payment_intent.payment_failed': {
+      const paymentIntent = event.data.object;
+      const paymentIntentId = paymentIntent.id;
+      const session = await stripeInstance.checkout.sessions.list({
         payment_intent: paymentIntentId,
       });
-      const {purchaseId} = session.data[0].metadata;
+      const { purchaseId } = session.data[0].metadata;
       const purchaseData = await Purchase.findById(purchaseId);
       purchaseData.status = 'failed';
       await purchaseData.save();
-      break;}
+      break;
+    }
     // ... handle other event types
     default:
       console.log(`Unhandled event type ${event.type}`);

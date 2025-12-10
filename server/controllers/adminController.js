@@ -1,8 +1,9 @@
 import User from '../models/User.js';
 import { clerkClient } from '@clerk/express';
-import { getUserId } from '../utils/authHelper.js'; 
+import { getUserId } from '../utils/authHelper.js';
 import Course from '../models/Course.js';
 import { Purchase } from '../models/Purchase.js';
+import { sendEducatorApprovalEmail, sendEducatorRejectionEmail } from '../utils/emailService.js';
 
 export const getPendingEducatorApplications = async (req, res) => {
     try {
@@ -48,6 +49,18 @@ export const approveEducator = async (req, res) => {
             return res.json({ success: false, message: 'User Not Found in Database.' });
         }
 
+        // 📧 Send approval email notification
+        try {
+            await sendEducatorApprovalEmail({
+                userEmail: updatedUser.email,
+                userName: updatedUser.name
+            });
+            console.log(`📧 Approval email sent to ${updatedUser.email}`);
+        } catch (emailError) {
+            console.error('📧 Failed to send approval email:', emailError);
+            // Continue even if email fails
+        }
+
         return res.json({ success: true, message: `Educator role approved for user ${userIdToApprove}.` });
 
     } catch (error) {
@@ -85,6 +98,18 @@ export const rejectEducator = async (req, res) => {
             return res.status(404).json({ success: false, message: 'User Not Found in Database.' });
         }
 
+        // 📧 Send rejection email notification
+        try {
+            await sendEducatorRejectionEmail({
+                userEmail: updatedUser.email,
+                userName: updatedUser.name
+            });
+            console.log(`📧 Rejection email sent to ${updatedUser.email}`);
+        } catch (emailError) {
+            console.error('📧 Failed to send rejection email:', emailError);
+            // Continue even if email fails
+        }
+
         return res.json({ success: true, message: `Educator application rejected for user ${userIdToReject}.` });
 
     } catch (error) {
@@ -95,7 +120,7 @@ export const rejectEducator = async (req, res) => {
 
 export const getUsersListByRole = async (req, res) => {
     try {
-        const { role, page = 1, limit = 10 } = req.query; 
+        const { role, page = 1, limit = 10 } = req.query;
 
         const pageNumber = parseInt(page);
         const limitNumber = parseInt(limit);
@@ -113,7 +138,7 @@ export const getUsersListByRole = async (req, res) => {
 
         const users = await User.find(query)
             .select('_id name email role imageUrl applicationStatus')
-            .sort({ createdAt: -1 }) 
+            .sort({ createdAt: -1 })
             .skip((pageNumber - 1) * limitNumber)
             .limit(limitNumber);
 
@@ -142,7 +167,7 @@ export const demoteEducator = async (req, res) => {
         await clerkClient.users.updateUserMetadata(userIdToDemote, {
             publicMetadata: {
                 role: 'student',
-                applicationStatus: 'none', 
+                applicationStatus: 'none',
             },
         });
 
@@ -181,7 +206,7 @@ export const getUserDetails = async (req, res) => {
             .select('-passwordHash -__v')
             .populate({
                 path: 'createdCourses',
-                select: 'courseTitle isPublished coursePrice' 
+                select: 'courseTitle isPublished coursePrice'
             })
             .populate({
                 path: 'enrolledCourses',
@@ -205,7 +230,7 @@ const calculateGlobalStats = async () => {
     const startOfCurrentMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
     const purchaseStats = await Purchase.aggregate([
-        { $match: { status: 'completed' } }, 
+        { $match: { status: 'completed' } },
         {
             $group: {
                 _id: null,
@@ -239,7 +264,7 @@ const calculateGlobalStats = async () => {
         { $limit: 5 },
         {
             $lookup: {
-                from: 'courses', 
+                from: 'courses',
                 localField: '_id',
                 foreignField: '_id',
                 as: 'courseDetails'
@@ -264,7 +289,7 @@ const calculateGlobalStats = async () => {
             select: 'courseTitle'
         })
         .select('userId amount createdAt')
-        .lean(); 
+        .lean();
 
     const stats = purchaseStats[0] || {};
 
@@ -279,7 +304,7 @@ const calculateGlobalStats = async () => {
         studentName: userMap[e.userId] || 'Unknown User',
         courseTitle: e.courseId.courseTitle,
         amount: e.amount,
-        date: e.createdAt.toLocaleDateString(), 
+        date: e.createdAt.toLocaleDateString(),
     }));
 
     const courseStatusDistribution = [
@@ -301,7 +326,7 @@ const calculateGlobalStats = async () => {
                         default: '100+'
                     }
                 },
-                count: { $sum: 1 } 
+                count: { $sum: 1 }
             }
         },
         { $sort: { _id: 1 } }
@@ -310,11 +335,11 @@ const calculateGlobalStats = async () => {
     return {
         totalEarnings: stats.totalEarnings || 0,
         totalPurchases: stats.totalPurchases || 0,
-        totalEnrollments: totalUsers || 0, 
+        totalEnrollments: totalUsers || 0,
         totalCourses: totalCourses || 0,
 
-        monthlyEarnings: [], 
-        topCourses: [], 
+        monthlyEarnings: [],
+        topCourses: [],
         priceDistribution: priceDistribution,
         recentEnrollments: finalRecentEnrollments,
         courseStatusDistribution: courseStatusDistribution,
@@ -364,7 +389,7 @@ const getRevenueByInterval = async (interval = 'monthly', limit = 6) => {
             $group: {
                 _id: dateOperator,
                 earnings: { $sum: '$amount' },
-                purchaseCount: { $sum: 1 } 
+                purchaseCount: { $sum: 1 }
             }
         },
         { $sort: { '_id.year': 1, '_id.month': 1, '_id.week': 1 } },
@@ -375,16 +400,16 @@ const getRevenueByInterval = async (interval = 'monthly', limit = 6) => {
 
     const finalRevenueData = revenueData.map(item => {
         let label;
-        if (item._id.month) { 
+        if (item._id.month) {
             label = `${MONTHS[item._id.month - 1]} ${item._id.year}`;
-        } else if (item._id.week) { 
+        } else if (item._id.week) {
             label = `Wk ${item._id.week} ${item._id.year}`;
-        } else if (item._id.year) { 
+        } else if (item._id.year) {
             label = `${item._id.year}`;
         }
 
         return {
-            month: label, 
+            month: label,
             earnings: item.earnings,
         };
     });
