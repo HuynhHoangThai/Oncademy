@@ -65,7 +65,6 @@ export const approveEducator = async (req, res) => {
                 userEmail: updatedUser.email,
                 userName: updatedUser.name
             });
-            console.log(`📧 Approval email sent to ${updatedUser.email}`);
         } catch (emailError) {
             console.error('📧 Failed to send approval email:', emailError);
             // Continue even if email fails
@@ -118,7 +117,6 @@ export const rejectEducator = async (req, res) => {
                 userEmail: updatedUser.email,
                 userName: updatedUser.name
             });
-            console.log(`📧 Rejection email sent to ${updatedUser.email}`);
         } catch (emailError) {
             console.error('📧 Failed to send rejection email:', emailError);
             // Continue even if email fails

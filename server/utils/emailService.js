@@ -43,7 +43,7 @@ const getTransporter = () => {
       },
     });
 
-    console.log(`✅ Email transporter initialized (${smtpHost}:${smtpPort})`);
+    // Email transporter initialized
   }
 
   return transporter;
@@ -58,7 +58,6 @@ const getRecipientEmail = (userEmail) => {
   const testEmail = process.env.EMAIL_TEST_RECIPIENT;
 
   if (isDevelopment && testEmail) {
-    console.log(`🔧 [DEV MODE] Overriding recipient: ${userEmail} → ${testEmail}`);
     return testEmail;
   }
 
@@ -80,7 +79,6 @@ export const sendCourseEnrollmentEmail = async ({ userEmail, userName, courseTit
 
     // Skip sending if transporter is not configured
     if (!transporter) {
-      console.log('⏭️  Skipping enrollment email - Email not configured');
       return { success: false, error: 'Email credentials not configured' };
     }
 
@@ -112,9 +110,9 @@ export const sendCourseEnrollmentEmail = async ({ userEmail, userName, courseTit
                   
                   <!-- Header -->
                   <tr>
-                    <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+                    <td style="background-color: #667eea; padding: 40px 30px; text-align: center; border-bottom: 4px solid #5568d3;">
                       <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">
-                        🎉 Chúc mừng!
+                        ✓ Đăng ký thành công
                       </h1>
                     </td>
                   </tr>
@@ -144,15 +142,15 @@ export const sendCourseEnrollmentEmail = async ({ userEmail, userName, courseTit
                       <table role="presentation" style="margin: 30px 0;">
                         <tr>
                           <td align="center">
-                            <a href="${courseUrl}" style="display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 8px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">
-                              Bắt đầu học ngay
+                            <a href="${courseUrl}" style="display: inline-block; padding: 14px 40px; background-color: #667eea; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 6px;">
+                              → Bắt đầu học ngay
                             </a>
                           </td>
                         </tr>
                       </table>
                       
                       <p style="margin: 20px 0 0; color: #666666; font-size: 14px; line-height: 1.6;">
-                        Chúc bạn học tập hiệu quả! 🚀
+                        Chúc bạn học tập hiệu quả!
                       </p>
                     </td>
                   </tr>
@@ -183,6 +181,7 @@ export const sendCourseEnrollmentEmail = async ({ userEmail, userName, courseTit
     }
 
     const recipientEmail = getRecipientEmail(userEmail);
+    console.log('📧 [ENROLLMENT] Sending email to:', recipientEmail, '(original:', userEmail, ')');
 
     // Send email with Nodemailer
     const info = await transporter.sendMail({
@@ -192,7 +191,8 @@ export const sendCourseEnrollmentEmail = async ({ userEmail, userName, courseTit
       html: emailHtml,
     });
 
-    console.log('✅ Enrollment email sent successfully:', info.messageId);
+    console.log('✅ [ENROLLMENT] Email sent successfully! MessageId:', info.messageId);
+
     return { success: true, data: { messageId: info.messageId } };
 
   } catch (error) {
@@ -214,7 +214,6 @@ export const sendEducatorApprovalEmail = async ({ userEmail, userName }) => {
 
     // Skip sending if transporter is not configured
     if (!transporter) {
-      console.log('⏭️  Skipping approval email - Email not configured');
       return { success: false, error: 'Email credentials not configured' };
     }
 
@@ -241,9 +240,9 @@ export const sendEducatorApprovalEmail = async ({ userEmail, userName }) => {
               <td align="center" style="padding: 40px 0;">
                 <table role="presentation" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
                   <tr>
-                    <td style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); padding: 40px 30px; text-align: center;">
+                    <td style="background-color: #10b981; padding: 40px 30px; text-align: center; border-bottom: 4px solid #059669;">
                       <h1 style="margin: 0; color: #ffffff; font-size: 28px;">
-                        🎊 Chúc mừng!
+                        ✓ Đơn giảng viên được chấp nhận
                       </h1>
                     </td>
                   </tr>
@@ -253,7 +252,7 @@ export const sendEducatorApprovalEmail = async ({ userEmail, userName }) => {
                         Xin chào <strong>${userName}</strong>,
                       </p>
                       <p style="margin: 0 0 20px; color: #333333; font-size: 16px;">
-                        Đơn đăng ký làm giảng viên của bạn đã được <strong style="color: #11998e;">CHẤP NHẬN</strong>!
+                        Đơn đăng ký làm giảng viên của bạn đã được <strong style="color: #10b981;">CHẤP NHẬN</strong>!
                       </p>
                       <p style="margin: 0 0 20px; color: #333333; font-size: 16px;">
                         Bây giờ bạn có thể bắt đầu tạo và quản lý các khóa học của riêng mình.
@@ -261,8 +260,8 @@ export const sendEducatorApprovalEmail = async ({ userEmail, userName }) => {
                       <table role="presentation" style="margin: 30px 0;">
                         <tr>
                           <td align="center">
-                            <a href="${process.env.FRONTEND_URL}/educator" style="display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 8px;">
-                              Đi tới Dashboard Giảng viên
+                            <a href="${process.env.FRONTEND_URL}/educator" style="display: inline-block; padding: 14px 40px; background-color: #10b981; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 6px;">
+                              → Đi tới Dashboard Giảng viên
                             </a>
                           </td>
                         </tr>
@@ -290,16 +289,18 @@ export const sendEducatorApprovalEmail = async ({ userEmail, userName }) => {
     }
 
     const recipientEmail = getRecipientEmail(userEmail);
+    console.log('📧 [APPROVAL] Sending email to:', recipientEmail, '(original:', userEmail, ')');
 
     // Send email with Nodemailer
     const info = await transporter.sendMail({
       from: process.env.EMAIL_FROM,
       to: recipientEmail,
-      subject: '🎉 Đơn giảng viên được chấp nhận - Oncademy',
+      subject: 'Đơn giảng viên được chấp nhận - Oncademy',
       html: emailHtml,
     });
 
-    console.log('✅ Educator approval email sent successfully:', info.messageId);
+    console.log('✅ [APPROVAL] Email sent successfully! MessageId:', info.messageId);
+
     return { success: true, data: { messageId: info.messageId } };
 
   } catch (error) {
@@ -321,7 +322,6 @@ export const sendEducatorRejectionEmail = async ({ userEmail, userName }) => {
 
     // Skip sending if transporter is not configured
     if (!transporter) {
-      console.log('⏭️  Skipping rejection email - Email not configured');
       return { success: false, error: 'Email credentials not configured' };
     }
 
@@ -343,7 +343,7 @@ export const sendEducatorRejectionEmail = async ({ userEmail, userName }) => {
               <td align="center" style="padding: 40px 0;">
                 <table role="presentation" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
                   <tr>
-                    <td style="background-color: #f44336; padding: 40px 30px; text-align: center;">
+                    <td style="background-color: #ef4444; padding: 40px 30px; text-align: center; border-bottom: 4px solid #dc2626;">
                       <h1 style="margin: 0; color: #ffffff; font-size: 28px;">
                         Thông báo đơn đăng ký
                       </h1>
@@ -361,7 +361,7 @@ export const sendEducatorRejectionEmail = async ({ userEmail, userName }) => {
                         Bạn có thể nộp đơn lại sau hoặc liên hệ với chúng tôi để biết thêm chi tiết.
                       </p>
                       <p style="margin: 20px 0 0; color: #666666; font-size: 14px;">
-                        Cảm ơn bạn đã quan tâm đến Oncademy! 🙏
+                        Cảm ơn bạn đã quan tâm đến Oncademy! 
                       </p>
                     </td>
                   </tr>
@@ -386,6 +386,7 @@ export const sendEducatorRejectionEmail = async ({ userEmail, userName }) => {
     }
 
     const recipientEmail = getRecipientEmail(userEmail);
+    console.log('📧 [REJECTION] Sending email to:', recipientEmail, '(original:', userEmail, ')');
 
     // Send email with Nodemailer
     const info = await transporter.sendMail({
@@ -395,7 +396,8 @@ export const sendEducatorRejectionEmail = async ({ userEmail, userName }) => {
       html: emailHtml,
     });
 
-    console.log('✅ Educator rejection email sent successfully:', info.messageId);
+    console.log('✅ [REJECTION] Email sent successfully! MessageId:', info.messageId);
+
     return { success: true, data: { messageId: info.messageId } };
 
   } catch (error) {

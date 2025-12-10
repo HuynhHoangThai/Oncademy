@@ -80,25 +80,34 @@ export const clerkWebhooks = async (req, res) => {
 const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
 
 export const stripeWebhooks = async (request, response) => {
+  console.log('🎯 [STRIPE WEBHOOK] Received webhook request');
   const sig = request.headers['stripe-signature'];
 
   let event;
 
   try {
     event = stripe.webhooks.constructEvent(request.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    console.log('✅ [STRIPE WEBHOOK] Event verified:', event.type);
   }
   catch (err) {
-    response.status(400).send(`Webhook Error: ${err.message}`);
+    console.error('❌ [STRIPE WEBHOOK] Verification failed:', err.message);
+    return response.status(400).send(`Webhook Error: ${err.message}`);
   }
 
+  console.log('🔄 [STRIPE WEBHOOK] Processing event type:', event.type);
   switch (event.type) {
     case 'payment_intent.succeeded':
+      console.log('💰 [PAYMENT SUCCESS] Payment intent succeeded!');
       const paymentIntent = event.data.object;
       const paymentIntentId = paymentIntent.id;
+      console.log('🔍 [PAYMENT SUCCESS] Payment Intent ID:', paymentIntentId);
+
       const session = await stripeInstance.checkout.sessions.list({
         payment_intent: paymentIntentId,
       });
+      console.log('🔍 [PAYMENT SUCCESS] Sessions found:', session.data.length);
       const { purchaseId } = session.data[0].metadata;
+      console.log('🔍 [PAYMENT SUCCESS] Purchase ID:', purchaseId);
 
       const purchaseData = await Purchase.findById(purchaseId);
       const userData = await User.findById(purchaseData.userId);
@@ -125,16 +134,21 @@ export const stripeWebhooks = async (request, response) => {
       await purchaseData.save();
 
       // 📧 Send enrollment confirmation email
+      console.log('🔍 [WEBHOOK] About to send enrollment email to:', userData.email);
+      console.log('🔍 [WEBHOOK] User data:', { email: userData.email, name: userData.name });
+      console.log('🔍 [WEBHOOK] Course data:', { title: courseData.courseTitle, id: courseData._id.toString() });
+
       try {
-        await sendCourseEnrollmentEmail({
+        const emailResult = await sendCourseEnrollmentEmail({
           userEmail: userData.email,
           userName: userData.name,
           courseTitle: courseData.courseTitle,
           courseId: courseData._id.toString()
         });
-        console.log(`📧 Enrollment email sent to ${userData.email}`);
+        console.log('✅ [WEBHOOK] Enrollment email result:', emailResult);
       } catch (emailError) {
-        console.error('📧 Failed to send enrollment email:', emailError);
+        console.error('❌ [WEBHOOK] Failed to send enrollment email:', emailError);
+        console.error('❌ [WEBHOOK] Error details:', emailError.message);
         // Don't fail the webhook if email fails - just log the error
       }
 
