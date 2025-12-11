@@ -95,7 +95,70 @@ export const stripeWebhooks = async (request, response) => {
   }
 
   console.log('🔄 [STRIPE WEBHOOK] Processing event type:', event.type);
+  console.log('📦 [STRIPE WEBHOOK] Event data:', JSON.stringify(event.data, null, 2));
+
   switch (event.type) {
+    case 'checkout.session.completed':
+      console.log('🛒 [CHECKOUT COMPLETED] Handling checkout session completed');
+      const checkoutSession = event.data.object;
+      console.log('🔍 [CHECKOUT] Session ID:', checkoutSession.id);
+      console.log('🔍 [CHECKOUT] Payment status:', checkoutSession.payment_status);
+      console.log('🔍 [CHECKOUT] Metadata:', checkoutSession.metadata);
+
+      if (checkoutSession.payment_status === 'paid' && checkoutSession.metadata.purchaseId) {
+        const { purchaseId } = checkoutSession.metadata;
+        console.log('🔍 [CHECKOUT] Purchase ID:', purchaseId);
+
+        try {
+          const purchaseData = await Purchase.findById(purchaseId);
+          const userData = await User.findById(purchaseData.userId);
+          const courseData = await Course.findById(purchaseData.courseId.toString());
+
+          // Check if student is already enrolled
+          const isAlreadyEnrolled = courseData.enrolledStudents.some(
+            studentId => studentId.toString() === userData._id.toString()
+          );
+
+          if (!isAlreadyEnrolled) {
+            courseData.enrolledStudents.push(userData._id);
+            await courseData.save();
+
+            userData.enrolledCourses.push(courseData._id);
+            await userData.save();
+
+            console.log(`✅ [CHECKOUT] Student ${userData.name} enrolled in course ${courseData.courseTitle}`);
+          } else {
+            console.log(`ℹ️ [CHECKOUT] Student ${userData.name} already enrolled in course ${courseData.courseTitle}`);
+          }
+
+          purchaseData.status = 'completed';
+          await purchaseData.save();
+
+          // Send enrollment email
+          console.log('🔍 [CHECKOUT] About to send enrollment email to:', userData.email);
+          try {
+            const emailResult = await sendCourseEnrollmentEmail({
+              userEmail: userData.email,
+              userName: userData.name,
+              courseTitle: courseData.courseTitle,
+              courseId: courseData._id.toString()
+            });
+            console.log('✅ [CHECKOUT] Enrollment email result:', emailResult);
+          } catch (emailError) {
+            console.error('❌ [CHECKOUT] Failed to send enrollment email:', emailError);
+          }
+
+          // Sync educator dashboard
+          const educatorId = courseData.educator;
+          await syncEducatorDashboard(educatorId).catch(err => {
+            console.error('Dashboard sync error after checkout:', err);
+          });
+        } catch (error) {
+          console.error('❌ [CHECKOUT] Error processing checkout session:', error);
+        }
+      }
+      break;
+
     case 'payment_intent.succeeded':
       console.log('💰 [PAYMENT SUCCESS] Payment intent succeeded!');
       const paymentIntent = event.data.object;
@@ -174,7 +237,8 @@ export const stripeWebhooks = async (request, response) => {
     }
     // ... handle other event types
     default:
-      console.log(`Unhandled event type ${event.type}`);
+      console.log(`⚠️ [STRIPE WEBHOOK] Unhandled event type: ${event.type}`);
+      console.log('📦 [STRIPE WEBHOOK] Full event:', JSON.stringify(event, null, 2));
   }
   response.json({ received: true });
 

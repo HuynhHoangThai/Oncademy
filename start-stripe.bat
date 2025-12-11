@@ -1,0 +1,3 @@
+@echo off
+echo Starting Stripe CLI webhook listener...
+C:\stripe\stripe.exe listen --forward-to localhost:5000/stripe
