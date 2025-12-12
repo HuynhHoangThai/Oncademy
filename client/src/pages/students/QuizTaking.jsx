@@ -4,6 +4,7 @@ import { useAuth } from '@clerk/clerk-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import Loading from '../../components/students/Loading';
+import { Clock } from 'lucide-react';
 
 const QuizTaking = () => {
   const { quizId } = useParams();
@@ -28,9 +29,9 @@ const QuizTaking = () => {
       );
 
       if (data.maxAttemptsReached) {
-        setQuiz(data.quiz); 
+        setQuiz({ ...data.quiz, previousAttempts: data.previousAttempts });
       } else if (data.success) {
-        setQuiz(data.quiz);
+        setQuiz({ ...data.quiz, previousAttempts: data.previousAttempts });
         setTimeRemaining(data.quiz.duration * 60); // Convert to seconds
         // Initialize answers object
         const initialAnswers = {};
@@ -99,7 +100,7 @@ const QuizTaking = () => {
 
     try {
       const token = await getToken();
-      
+
       // Transform answers to match backend format
       const formattedAnswers = quiz.questions.map((q, index) => ({
         questionId: q.questionId,
@@ -134,7 +135,7 @@ const QuizTaking = () => {
   if (!quiz) return null;
 
   if (!quizStarted && quiz) {
-    const isMaxAttempts = quiz.maxAttemptsReached; 
+    const isMaxAttempts = quiz.maxAttemptsReached;
     const attemptsUsed = quiz.previousAttempts || 0;
 
     if (isMaxAttempts) {
@@ -146,7 +147,7 @@ const QuizTaking = () => {
             </svg>
             <h1 className="text-3xl font-bold text-red-700 mb-2">Limit Reached!</h1>
             <p className="text-gray-600 mb-6">
-              You have reached the maximum allowed attempts ({quiz.attemptsAllowed}) for this quiz.
+              You have reached the maximum allowed attempts ({quiz.maxAttempts}) for this quiz.
             </p>
             <button
               onClick={() => navigate(-1)}
@@ -185,18 +186,18 @@ const QuizTaking = () => {
               <p className="text-2xl font-bold text-orange-700">{quiz.totalPoints}</p>
             </div>
             <div className="bg-orange-50 rounded-lg p-4 text-center">
-            <p className="text-gray-600 text-sm mb-1">Attempts Left</p>
-            <p className="text-2xl font-bold text-orange-700">
-              {quiz.attemptsAllowed === 0
-                ? 'Unlimited'
-                : `${quiz.attemptsAllowed - attemptsUsed} / ${quiz.attemptsAllowed}`
-              }
-            </p>
-          </div>
+              <p className="text-gray-600 text-sm mb-1">Attempts Left</p>
+              <p className="text-2xl font-bold text-orange-700">
+                {quiz.maxAttempts === 0
+                  ? 'Unlimited'
+                  : `${quiz.maxAttempts - attemptsUsed} / ${quiz.maxAttempts}`
+                }
+              </p>
+            </div>
           </div>
 
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <h3 className="font-semibold text-yellow-800 mb-2">📋 Instructions:</h3>
+            <h3 className="font-semibold text-yellow-800 mb-2"> Instructions:</h3>
             <ul className="text-sm text-yellow-700 space-y-1">
               <li>• Answer all questions before submitting</li>
               <li>• Timer will start when you begin the quiz</li>
@@ -232,7 +233,7 @@ const QuizTaking = () => {
           </div>
           <div className="text-right">
             <div className={`text-2xl font-bold ${timeRemaining < 300 ? 'text-red-600' : 'text-blue-600'}`}>
-              ⏱️ {formatTime(timeRemaining)}
+              <Clock className="inline-block mr-1" size={20} /> {formatTime(timeRemaining)}
             </div>
             <p className="text-xs text-gray-500">Time Remaining</p>
           </div>
@@ -266,11 +267,10 @@ const QuizTaking = () => {
               {currentQ.options.map((option, optIndex) => (
                 <label
                   key={optIndex}
-                  className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                    answers[currentQuestion] === option.optionId
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-300 hover:border-blue-300 hover:bg-gray-50'
-                  }`}
+                  className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${answers[currentQuestion] === option.optionId
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-300 hover:border-blue-300 hover:bg-gray-50'
+                    }`}
                 >
                   <input
                     type="radio"
@@ -292,11 +292,10 @@ const QuizTaking = () => {
               {currentQ.options.map((option, optIndex) => (
                 <label
                   key={optIndex}
-                  className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                    answers[currentQuestion] === option.optionId
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-300 hover:border-blue-300 hover:bg-gray-50'
-                  }`}
+                  className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${answers[currentQuestion] === option.optionId
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-300 hover:border-blue-300 hover:bg-gray-50'
+                    }`}
                 >
                   <input
                     type="radio"
@@ -358,13 +357,12 @@ const QuizTaking = () => {
               <button
                 key={index}
                 onClick={() => setCurrentQuestion(index)}
-                className={`w-10 h-10 rounded-lg font-semibold transition-all ${
-                  index === currentQuestion
-                    ? 'bg-blue-600 text-white'
-                    : answers[index] !== null && answers[index] !== ''
+                className={`w-10 h-10 rounded-lg font-semibold transition-all ${index === currentQuestion
+                  ? 'bg-blue-600 text-white'
+                  : answers[index] !== null && answers[index] !== ''
                     ? 'bg-green-100 text-green-700 border border-green-300'
                     : 'bg-gray-100 text-gray-600 border border-gray-300'
-                }`}
+                  }`}
               >
                 {index + 1}
               </button>

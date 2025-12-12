@@ -3,6 +3,7 @@ import { useAuth } from '@clerk/clerk-react'
 import axios from 'axios'
 import { toast } from 'react-toastify'
 import Loading from '../../components/students/Loading';
+import { AlertTriangle } from 'lucide-react';
 
 const MyCourses = () => {
   const { getToken } = useAuth()
@@ -752,7 +753,7 @@ const MyCourses = () => {
                   {Array.isArray(courseToDelete.enrolledStudents) ? courseToDelete.enrolledStudents.length : 0} student(s) enrolled
                 </p>
               </div>
-              <p className="text-red-600 text-sm mt-3 font-medium">⚠️ This action cannot be undone!</p>
+              <p className="text-red-600 text-sm mt-3 font-medium flex items-center gap-1"><AlertTriangle size={16} /> Warning: This action cannot be undone!</p>
             </div>
 
             <div className="flex gap-3">
@@ -1203,7 +1204,7 @@ const MyCourses = () => {
               Are you sure you want to delete "{chapters[deletingChapterIndex]?.chapterTitle}"?
               This will also delete all {chapters[deletingChapterIndex]?.chapterContent?.length || 0} lecture(s) in this chapter.
             </p>
-            <p className="text-red-600 text-sm mb-4 font-medium">⚠️ This action cannot be undone!</p>
+            <p className="text-red-600 text-sm mb-4 font-medium flex items-center gap-1"><AlertTriangle size={16} /> Warning: This action cannot be undone!</p>
             <div className="flex gap-3">
               <button
                 onClick={() => { setShowDeleteChapterDialog(false); setDeletingChapterIndex(null); }}
@@ -1358,7 +1359,7 @@ const MyCourses = () => {
             <p className="text-gray-600 mb-4">
               Are you sure you want to delete "{chapters[currentChapterIndex]?.chapterContent[deletingLectureIndex]?.lectureTitle}"?
             </p>
-            <p className="text-red-600 text-sm mb-4 font-medium">⚠️ This action cannot be undone!</p>
+            <p className="text-red-600 text-sm mb-4 font-medium flex items-center gap-1"><AlertTriangle size={16} /> Warning: This action cannot be undone!</p>
             <div className="flex gap-3">
               <button
                 onClick={() => {

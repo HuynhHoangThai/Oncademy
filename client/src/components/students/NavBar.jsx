@@ -30,21 +30,21 @@ const NavBar = () => {
   return (
     <div className={`flex items-center justify-between px-4 sm:px-10 md:px-14 lg:px-36 border-b border-gray-500 py-4 ${isCourseListPage ? 'bg-white' : 'bg-cyan-100/70'}`}>
       <Link to="/">
-        <img src={assets.logo} alt="Logo" className="w-28 lg:w-32 cursor-pointer" />
+        <img src={assets.logo} alt="Logo" className="w-12 lg:w-14 cursor-pointer" />
       </Link>
       <div className=" hidden md:flex items-center gap-5 text-gray-600">
         <div className='flex items-center gap-5'>
           {user &&
             <>
-            <button
-              onClick={handleEducatorClick}
-              className="text-gray-600 hover:text-blue-600 transition duration-200 font-medium">
-              {isEducatorRole 
-                ? 'Educator Dashboard'
-                : applicationStatus === 'pending'
-                  ? 'Application Pending'
-                  : 'Become our Educator' 
-              }</button>
+              <button
+                onClick={handleEducatorClick}
+                className="text-gray-600 hover:text-blue-600 transition duration-200 font-medium">
+                {isEducatorRole
+                  ? 'Educator Dashboard'
+                  : applicationStatus === 'pending'
+                    ? 'Application Pending'
+                    : 'Become our Educator'
+                }</button>
               <span className="text-gray-400">|</span>
               <Link to="/my-enrollments" className="text-gray-600 hover:text-blue-600 transition duration-200 font-medium">My Enrollments</Link>
               <span className="text-gray-400">|</span>
@@ -55,17 +55,17 @@ const NavBar = () => {
                 My Quizzes
               </Link>
               <span className="text-gray-400">|</span>
-            <Link to="/favorites" className="text-gray-600 hover:text-blue-600 transition duration-200 font-medium flex items-center gap-1">
+              <Link to="/favorites" className="text-gray-600 hover:text-blue-600 transition duration-200 font-medium flex items-center gap-1">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="m12 21.35-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
                 </svg>
-              Favorites
-              <span
-                className="px-1 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded-full leading-none ml-1 transform -translate-y-[4px]"
-                style={{ minWidth: '16px', textAlign: 'center' }}
-              >
-                {favoriteCount}
-              </span>
+                Favorites
+                <span
+                  className="px-1 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded-full leading-none ml-1 transform -translate-y-[4px]"
+                  style={{ minWidth: '16px', textAlign: 'center' }}
+                >
+                  {favoriteCount}
+                </span>
               </Link>
               <span className="text-gray-400">|</span>
               <Link to="/view-history" className="text-gray-600 hover:text-blue-600 transition duration-200 font-medium flex items-center gap-1">

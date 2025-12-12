@@ -22,7 +22,7 @@ const createQuiz = async (req, res) => {
   try {
     const { courseId, chapterId, lectureId, questions, maxAttempts, deadline, ...quizSettings } = req.body;
     const educatorId = req.userId || getUserId(req);
-    
+
     if (!educatorId) {
       return res.json({ success: false, message: 'User ID not found' });
     }
@@ -36,7 +36,7 @@ const createQuiz = async (req, res) => {
     if (!course) {
       return res.json({ success: false, message: 'Course not found' });
     }
-    
+
     if (course.educator.toString() !== educatorId) {
       return res.json({ success: false, message: 'Unauthorized - not your course' });
     }
@@ -70,8 +70,8 @@ const createQuiz = async (req, res) => {
 
       // Handle fill-blank
       if (q.questionType === 'fill-blank') {
-        baseQuestion.correctAnswers = Array.isArray(q.correctAnswer) 
-          ? q.correctAnswer 
+        baseQuestion.correctAnswers = Array.isArray(q.correctAnswer)
+          ? q.correctAnswer
           : [q.correctAnswer];
         baseQuestion.caseSensitive = q.caseSensitive || false;
       }
@@ -86,7 +86,7 @@ const createQuiz = async (req, res) => {
       quizType: quizSettings.quizType || 'quiz',
       duration: quizSettings.duration || 30,
       passingScore: quizSettings.passingScore || 70,
-      attemptsAllowed: maxAttempts || quizSettings.attemptsAllowed || 0, 
+      maxAttempts: maxAttempts || quizSettings.maxAttempts || 0,
       deadline: deadline || null,
       shuffleQuestions: quizSettings.shuffleQuestions || false,
       shuffleOptions: quizSettings.shuffleOptions || false,
@@ -211,7 +211,7 @@ const uploadQuizFromExcel = async (req, res) => {
               isCorrect: correctOption === 'D'
             });
           }
-          
+
           // Remove correctAnswers array for multiple-choice
           delete currentQuestion.correctAnswers;
         } else if (questionType === 'true-false') {
@@ -221,20 +221,20 @@ const uploadQuizFromExcel = async (req, res) => {
             { optionId: 'true', optionText: 'True', isCorrect: currentQuestion.correctAnswer === true },
             { optionId: 'false', optionText: 'False', isCorrect: currentQuestion.correctAnswer === false }
           ];
-          
+
           // Remove correctAnswers array for true-false
           delete currentQuestion.correctAnswers;
         } else if (questionType === 'fill-blank') {
           const answers = row.CorrectAnswer?.toString().split('|') || [];
           currentQuestion.correctAnswers = answers.map(a => a.trim()).filter(a => a);
           currentQuestion.caseSensitive = row.CaseSensitive?.toString().toLowerCase() === 'yes';
-          
+
           // Remove options array for fill-blank
           delete currentQuestion.options;
         } else if (questionType === 'essay') {
           currentQuestion.maxWords = parseInt(row.MaxWords) || 500;
           currentQuestion.rubric = row.Rubric?.trim() || '';
-          
+
           // Remove options and correctAnswers for essay
           delete currentQuestion.options;
           delete currentQuestion.correctAnswers;
@@ -312,12 +312,12 @@ const getPublishedQuizzes = async (req, res) => {
   try {
     const { courseId } = req.params;
 
-    const quizzes = await Quiz.find({ 
-      courseId, 
-      isPublished: true 
+    const quizzes = await Quiz.find({
+      courseId,
+      isPublished: true
     })
-    .select('-questions.correctAnswer -questions.correctAnswers -questions.options.isCorrect') // Hide answers
-    .sort({ createdAt: 1 });
+      .select('-questions.correctAnswer -questions.correctAnswers -questions.options.isCorrect') // Hide answers
+      .sort({ createdAt: 1 });
 
     res.json({
       success: true,
@@ -334,7 +334,7 @@ const getQuizForTaking = async (req, res) => {
   try {
     const { quizId } = req.params;
     const userId = getUserId(req);
-    
+
     if (!userId) {
       return res.json({ success: false, message: 'User not authenticated' });
     }
@@ -356,10 +356,10 @@ const getQuizForTaking = async (req, res) => {
     }).sort({ attemptNumber: -1 });
 
     // Check if max attempts reached
-    if (quiz.attemptsAllowed > 0 && attempts.length >= quiz.attemptsAllowed) {
+    if (quiz.maxAttempts > 0 && attempts.length >= quiz.maxAttempts) {
       return res.json({
         success: false,
-        message: `Maximum attempts (${quiz.attemptsAllowed}) reached`,
+        message: `Maximum attempts (${quiz.maxAttempts}) reached`,
         maxAttemptsReached: true,
         previousAttempts: attempts.length,
         quiz: quiz
@@ -414,7 +414,7 @@ const submitQuizAttempt = async (req, res) => {
     const { quizId } = req.params;
     const { answers } = req.body;
     const userId = getUserId(req);
-    
+
     if (!userId) {
       return res.json({ success: false, message: 'User not authenticated' });
     }
@@ -424,6 +424,69 @@ const submitQuizAttempt = async (req, res) => {
       return res.json({ success: false, message: 'Quiz not available' });
     }
 
+    // Check previous attempts
+    const attempts = await QuizAttempt.find({
+      quizId,
+      studentId: userId
+    });
+
+    if (quiz.maxAttempts > 0 && attempts.length >= quiz.maxAttempts) {
+      return res.json({ success: false, message: 'Maximum attempts reached' });
+    }
+
+    // Grade the quiz
+    let pointsEarned = 0;
+    const gradedAnswers = answers.map(({ questionId, answer }) => {
+      const question = quiz.questions.find(q => q.questionId === questionId);
+      if (!question) return { questionId, answer, isCorrect: false, pointsEarned: 0 };
+
+      let isCorrect = false;
+      let pointsForQuestion = 0;
+
+      // Auto-grade multiple choice and true/false
+      if (question.questionType === 'multiple-choice' || question.questionType === 'true-false') {
+        const correctOption = question.options.find(opt => opt.isCorrect);
+        isCorrect = correctOption && answer === correctOption.optionId;
+        if (isCorrect) {
+          pointsForQuestion = question.points;
+          pointsEarned += question.points;
+        }
+      }
+
+      // Fill in the blank
+      if (question.questionType === 'fill-blank') {
+        const normalizedAnswer = question.caseSensitive
+          ? answer.trim()
+          : answer.trim().toLowerCase();
+
+        isCorrect = question.correctAnswers.some(correctAns => {
+          const normalizedCorrect = question.caseSensitive
+            ? correctAns.trim()
+            : correctAns.trim().toLowerCase();
+          return normalizedAnswer === normalizedCorrect;
+        });
+
+        if (isCorrect) {
+          pointsForQuestion = question.points;
+          pointsEarned += question.points;
+        }
+      }
+
+      // Essay - needs manual grading
+      if (question.questionType === 'essay') {
+        isCorrect = null; // To be graded manually
+        pointsForQuestion = null;
+      }
+
+      return {
+        questionId,
+        answer,
+        isCorrect,
+        pointsEarned: pointsForQuestion
+      };
+    });
+
+    // Now that gradedAnswers is computed, we can create detailedResults
     const detailedResults = quiz.questions.map(question => {
       const gradedAnswer = gradedAnswers.find(ga => ga.questionId === question.questionId);
       const isAutoGraded = ['multiple-choice', 'true-false', 'fill-blank'].includes(question.questionType);
@@ -452,74 +515,12 @@ const submitQuizAttempt = async (req, res) => {
       };
     });
 
-    // Check previous attempts
-    const attempts = await QuizAttempt.find({
-      quizId,
-      studentId: userId
-    });
-
-    if (quiz.attemptsAllowed > 0 && attempts.length >= quiz.attemptsAllowed) {
-      return res.json({ success: false, message: 'Maximum attempts reached' });
-    }
-
-    // Grade the quiz
-    let pointsEarned = 0;
-    const gradedAnswers = answers.map(({ questionId, answer }) => {
-      const question = quiz.questions.find(q => q.questionId === questionId);
-      if (!question) return { questionId, answer, isCorrect: false, pointsEarned: 0 };
-
-      let isCorrect = false;
-      let pointsForQuestion = 0;
-
-      // Auto-grade multiple choice and true/false
-      if (question.questionType === 'multiple-choice' || question.questionType === 'true-false') {
-        const correctOption = question.options.find(opt => opt.isCorrect);
-        isCorrect = correctOption && answer === correctOption.optionId;
-        if (isCorrect) {
-          pointsForQuestion = question.points;
-          pointsEarned += question.points;
-        }
-      }
-
-      // Fill in the blank
-      if (question.questionType === 'fill-blank') {
-        const normalizedAnswer = question.caseSensitive 
-          ? answer.trim() 
-          : answer.trim().toLowerCase();
-        
-        isCorrect = question.correctAnswers.some(correctAns => {
-          const normalizedCorrect = question.caseSensitive 
-            ? correctAns.trim() 
-            : correctAns.trim().toLowerCase();
-          return normalizedAnswer === normalizedCorrect;
-        });
-
-        if (isCorrect) {
-          pointsForQuestion = question.points;
-          pointsEarned += question.points;
-        }
-      }
-
-      // Essay - needs manual grading
-      if (question.questionType === 'essay') {
-        isCorrect = null; // To be graded manually
-        pointsForQuestion = null;
-      }
-
-      return {
-        questionId,
-        answer,
-        isCorrect,
-        pointsEarned: pointsForQuestion
-      };
-    });
-
     const hasEssayQuestions = quiz.questions.some(q => q.questionType === 'essay');
-    const scorePercentage = quiz.totalPoints > 0 
-      ? (pointsEarned / quiz.totalPoints) * 100 
+    const scorePercentage = quiz.totalPoints > 0
+      ? (pointsEarned / quiz.totalPoints) * 100
       : 0;
-    
-    const passed = hasEssayQuestions 
+
+    const passed = hasEssayQuestions
       ? null // Pending manual grading
       : scorePercentage >= quiz.passingScore;
 
@@ -543,8 +544,8 @@ const submitQuizAttempt = async (req, res) => {
 
     res.json({
       success: true,
-      message: hasEssayQuestions 
-        ? 'Quiz submitted. Awaiting manual grading for essay questions.' 
+      message: hasEssayQuestions
+        ? 'Quiz submitted. Awaiting manual grading for essay questions.'
         : 'Quiz submitted successfully!',
       attemptId: attempt._id,
       scoring: attempt.scoring,
@@ -928,14 +929,14 @@ const gradeAttempt = async (req, res) => {
     let totalPointsEarned = 0;
     attempt.answers = attempt.answers.map(answer => {
       const gradeInfo = grades.find(g => g.questionId === answer.questionId);
-      
+
       if (gradeInfo) {
         // Manual grading for essay
         answer.pointsEarned = gradeInfo.pointsEarned;
         answer.feedback = gradeInfo.feedback || '';
         answer.isCorrect = gradeInfo.pointsEarned > 0;
       }
-      
+
       totalPointsEarned += answer.pointsEarned || 0;
       return answer;
     });
@@ -976,13 +977,13 @@ const getEducatorQuizStats = async (req, res) => {
     const quizIds = quizzes.map(q => q._id);
 
     // Get all attempts for these quizzes
-    const attempts = await QuizAttempt.find({ 
+    const attempts = await QuizAttempt.find({
       quizId: { $in: quizIds },
       status: { $in: ['completed', 'graded'] }
     });
 
     const totalAttempts = attempts.length;
-    
+
     if (totalAttempts === 0) {
       return res.json({
         success: true,
@@ -995,13 +996,13 @@ const getEducatorQuizStats = async (req, res) => {
     }
 
     // Calculate average score
-    const totalScore = attempts.reduce((sum, attempt) => 
+    const totalScore = attempts.reduce((sum, attempt) =>
       sum + (attempt.scoring?.scorePercentage || 0), 0
     );
     const avgScore = totalScore / totalAttempts;
 
     // Calculate pass rate
-    const passedAttempts = attempts.filter(attempt => 
+    const passedAttempts = attempts.filter(attempt =>
       attempt.scoring?.passed === true
     ).length;
     const passRate = (passedAttempts / totalAttempts) * 100;
@@ -1037,10 +1038,10 @@ const getStudentQuizAttempts = async (req, res) => {
 
     // Group attempts by student
     const studentAttemptsMap = {};
-    
+
     for (const attempt of attempts) {
       const studentId = attempt.studentId;
-      
+
       if (!studentAttemptsMap[studentId]) {
         studentAttemptsMap[studentId] = {
           studentId,
@@ -1082,7 +1083,7 @@ const getStudentQuizAttempts = async (req, res) => {
 
     // Fetch student information from Clerk
     const { clerkClient } = await import('@clerk/express');
-    
+
     for (const student of studentAttempts) {
       try {
         const user = await clerkClient.users.getUser(student.studentId);
@@ -1115,7 +1116,7 @@ const getStudentQuizAttempts = async (req, res) => {
 const getMyAttempts = async (req, res) => {
   try {
     const userId = req.userId || getUserId(req);
-    
+
     if (!userId) {
       return res.json({ success: false, message: 'User ID not found' });
     }
@@ -1138,14 +1139,14 @@ const getMyAttempts = async (req, res) => {
 
     // Transform data for frontend
     const transformedAttempts = [];
-    
+
     for (const attempt of attempts) {
       let courseTitle = 'Unknown Course';
       let quizTitle = attempt.quizId?.quizTitle || 'Unknown Quiz';
-      
+
       // Try to get courseId from Quiz or QuizAttempt
       let courseIdValue = attempt.quizId?.courseId || attempt.courseId;
-      
+
       // If courseId exists
       if (courseIdValue) {
         // Check if already populated (has courseTitle property)
@@ -1178,7 +1179,7 @@ const getMyAttempts = async (req, res) => {
           }
         }
       }
-      
+
       transformedAttempts.push({
         _id: attempt._id,
         quizId: attempt.quizId?._id,

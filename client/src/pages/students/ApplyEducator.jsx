@@ -5,6 +5,7 @@ import { uploadFile } from '../../utils/fileUploader';
 import api from '../../utils/api';
 import { useEffect } from 'react';
 import { toast } from 'react-toastify';
+import { FileText } from 'lucide-react';
 
 const ApplyEducator = () => {
     const navigate = useNavigate();
@@ -98,7 +99,7 @@ const ApplyEducator = () => {
             setMessage('Uploading CV...');
             const responseData = await api.post('/api/user/apply-educator', { resumeUrl });
 
-            if (responseData && responseData.success) { 
+            if (responseData && responseData.success) {
                 await user.reload();
 
                 toast.success('Application has been submitted successfully! Please wait for Admin to review.');
@@ -170,7 +171,7 @@ const ApplyEducator = () => {
                     ) : (
                         <div className="flex flex-col sm:flex-row items-center justify-between p-3 border border-gray-300 rounded-lg bg-gray-50 space-y-2 sm:space-y-0">
                             <span className="text-sm font-medium text-gray-700 truncate sm:mr-4 w-full sm:w-auto">
-                                📂 **{selectedFile.name}**
+                                <FileText className="inline-block mr-2" size={16} />{selectedFile.name}
                             </span>
                             <div className='flex items-center gap-3'>
                                 {/* NÚT REVIEW MỚI: Sử dụng filePreviewUrl */}
@@ -220,7 +221,7 @@ const ApplyEducator = () => {
                             Sending...
                         </div>
                     ) : (
-                            applicationStatus === 'rejected' ? 'Resubmit Application' : 'Send CV & Apply'
+                        applicationStatus === 'rejected' ? 'Resubmit Application' : 'Send CV & Apply'
                     )}
                 </button>
             </form>

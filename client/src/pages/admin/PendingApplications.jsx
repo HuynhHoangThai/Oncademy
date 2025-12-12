@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import api from '../../utils/api'; 
+import api from '../../utils/api';
 import ConfirmationModal from '../../components/common/ConfirmationModal';
+import { PartyPopper } from 'lucide-react';
 
 const normalizeResumeUrl = (url) => {
     if (!url) return '#';
@@ -18,7 +19,7 @@ const PendingApplications = () => {
 
     const [modal, setModal] = useState({
         isOpen: false,
-        action: null, 
+        action: null,
         user: { id: null, name: null }
     });
 
@@ -60,10 +61,10 @@ const PendingApplications = () => {
 
         if (action === 'reject' && !rejectionReason.trim()) {
             toast.warn('Please provide a rejection reason.');
-            return; 
+            return;
         }
 
-        closeModal(); 
+        closeModal();
 
         try {
             if (action === 'approve') {
@@ -96,7 +97,7 @@ const PendingApplications = () => {
             <h1 className="text-3xl font-bold mb-6 text-gray-800">Pending Educator Applications ({applications.length})</h1>
 
             {applications.length === 0 ? (
-                <div className="text-center py-10 text-gray-500">🎉 No pending applications at the moment!</div>
+                <div className="text-center py-10 text-gray-500 flex items-center justify-center gap-2"><PartyPopper size={20} /> No pending applications at the moment!</div>
             ) : (
                 <div className="space-y-4">
                     {applications.map((app) => (

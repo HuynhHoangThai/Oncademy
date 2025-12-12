@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 import api from '../../utils/api'; // Axios instance đã cấu hình
 import ConfirmationModal from '../../components/common/ConfirmationModal';
 import { Link } from 'react-router-dom';
+import { Sparkles } from 'lucide-react';
 
 const PendingCourses = () => {
     const [courses, setCourses] = useState([]);
@@ -103,7 +104,7 @@ const PendingCourses = () => {
 
             {courses.length === 0 ? (
                 <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-                    <p className="text-lg">✨ No courses pending approval!</p>
+                    <p className="text-lg flex items-center justify-center gap-2"><Sparkles size={20} /> No courses pending approval!</p>
                 </div>
             ) : (
                 <div className="grid gap-6">
@@ -140,9 +141,26 @@ const PendingCourses = () => {
                                     </div>
 
                                     <div className="flex gap-4 text-sm text-gray-600">
-                                        <span>💰 Price: <b>{course.coursePrice === 0 ? 'Free' : `$${course.coursePrice}`}</b></span>
-                                        <span>🏷️ Discount: <b>{course.discount}%</b></span>
-                                        <span>📚 Chapters: <b>{course.courseContent?.length || 0}</b></span>
+                                        <span className="flex items-center gap-1">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                            </svg>
+                                            Price: <b>{course.coursePrice === 0 ? 'Free' : `$${course.coursePrice}`}</b>
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                                                <line x1="7" y1="7" x2="7.01" y2="7" />
+                                            </svg>
+                                            Discount: <b>{course.discount}%</b>
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                                            </svg>
+                                            Chapters: <b>{course.courseContent?.length || 0}</b>
+                                        </span>
                                     </div>
                                 </div>
 

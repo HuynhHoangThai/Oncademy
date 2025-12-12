@@ -8,6 +8,7 @@ import axios from 'axios'
 import { useAuth } from '@clerk/clerk-react'
 import { toast } from 'react-toastify'
 import Loading from '../../components/students/Loading'
+import { AlertTriangle } from 'lucide-react';
 
 const EditCourse = () => {
   const { id } = useParams()
@@ -34,7 +35,7 @@ const EditCourse = () => {
   const [deletingChapter, setDeletingChapter] = useState(null)
   const [deletingLecture, setDeletingLecture] = useState(null)
   const [currentChapterId, setCurrentChapterId] = useState(null)
-  
+
   const [lectureDetails, setLectureDetails] = useState({
     lectureTitle: '',
     lectureDuration: 0,
@@ -232,7 +233,7 @@ const EditCourse = () => {
     e.preventDefault()
     try {
       if (!courseTitle) return toast.error('Please provide a course title')
-      
+
       setSaving(true)
       const token = await getToken()
 
@@ -450,9 +451,8 @@ const EditCourse = () => {
         <button
           type="submit"
           disabled={saving}
-          className={`w-full py-3 rounded-lg font-semibold text-white transition ${
-            saving ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
-          }`}
+          className={`w-full py-3 rounded-lg font-semibold text-white transition ${saving ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+            }`}
         >
           {saving ? 'Saving...' : 'Save Changes'}
         </button>
@@ -543,7 +543,7 @@ const EditCourse = () => {
               <p className="font-semibold text-gray-800">{deletingChapter.chapterTitle}</p>
               <p className="text-sm text-gray-600">{deletingChapter.chapterContent.length} lecture(s)</p>
             </div>
-            <p className="text-red-600 text-sm mb-4 font-medium">⚠️ This will delete all lectures in this chapter!</p>
+            <p className="text-red-600 text-sm mb-4 font-medium flex items-center gap-1"><AlertTriangle size={16} /> Warning: This will delete all lectures in this chapter!</p>
             <div className="flex gap-3">
               <button
                 type="button"
@@ -569,7 +569,7 @@ const EditCourse = () => {
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-md z-50 animate-fadeIn">
           <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-4 animate-scaleIn">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Add New Lecture</h2>
-            
+
             <input
               type="text"
               placeholder="Lecture Title"
@@ -577,7 +577,7 @@ const EditCourse = () => {
               onChange={(e) => setLectureDetails({ ...lectureDetails, lectureTitle: e.target.value })}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
             />
-            
+
             <input
               type="number"
               placeholder="Duration (minutes)"
@@ -585,7 +585,7 @@ const EditCourse = () => {
               onChange={(e) => setLectureDetails({ ...lectureDetails, lectureDuration: e.target.value })}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
             />
-            
+
             <input
               type="text"
               placeholder="Video URL"
@@ -593,7 +593,7 @@ const EditCourse = () => {
               onChange={(e) => setLectureDetails({ ...lectureDetails, lectureUrl: e.target.value })}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
             />
-            
+
             <label className="flex items-center gap-2 mb-4 cursor-pointer">
               <input
                 type="checkbox"
@@ -632,7 +632,7 @@ const EditCourse = () => {
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-md z-50 animate-fadeIn">
           <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-4 animate-scaleIn">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Edit Lecture</h2>
-            
+
             <input
               type="text"
               placeholder="Lecture Title"
@@ -640,7 +640,7 @@ const EditCourse = () => {
               onChange={(e) => setEditingLecture({ ...editingLecture, lectureTitle: e.target.value })}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
             />
-            
+
             <input
               type="number"
               placeholder="Duration (minutes)"
@@ -648,7 +648,7 @@ const EditCourse = () => {
               onChange={(e) => setEditingLecture({ ...editingLecture, lectureDuration: e.target.value })}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
             />
-            
+
             <input
               type="text"
               placeholder="Video URL"
@@ -656,7 +656,7 @@ const EditCourse = () => {
               onChange={(e) => setEditingLecture({ ...editingLecture, lectureUrl: e.target.value })}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
             />
-            
+
             <label className="flex items-center gap-2 mb-4 cursor-pointer">
               <input
                 type="checkbox"
@@ -704,7 +704,7 @@ const EditCourse = () => {
               <p className="font-semibold text-gray-800">{deletingLecture.lecture.lectureTitle}</p>
               <p className="text-sm text-gray-600">Duration: {deletingLecture.lecture.lectureDuration} min</p>
             </div>
-            <p className="text-red-600 text-sm mb-4 font-medium">⚠️ This action cannot be undone!</p>
+            <p className="text-red-600 text-sm mb-4 font-medium flex items-center gap-1"><AlertTriangle size={16} /> Warning: This action cannot be undone!</p>
             <div className="flex gap-3">
               <button
                 type="button"

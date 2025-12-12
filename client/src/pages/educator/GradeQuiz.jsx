@@ -4,6 +4,7 @@ import { useAuth } from '@clerk/clerk-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import Loading from '../../components/students/Loading';
+import { Check, X } from 'lucide-react';
 
 const GradeQuiz = () => {
   const { attemptId } = useParams();
@@ -34,7 +35,7 @@ const GradeQuiz = () => {
       if (data.success) {
         setAttempt(data.attempt);
         setQuiz(data.quiz);
-        
+
         // Initialize grades and feedback from existing data
         const initialGrades = {};
         const initialFeedback = {};
@@ -63,12 +64,12 @@ const GradeQuiz = () => {
     const numValue = parseFloat(value) || 0;
     const question = quiz.questions.find(q => q.questionId === attempt.answers[index].questionId);
     const maxPoints = question?.points || 0;
-    
+
     if (numValue < 0 || numValue > maxPoints) {
       toast.error(`Points must be between 0 and ${maxPoints}`);
       return;
     }
-    
+
     setGrades(prev => ({
       ...prev,
       [index]: numValue
@@ -216,13 +217,12 @@ const GradeQuiz = () => {
             return (
               <div
                 key={index}
-                className={`bg-white rounded-xl shadow-lg p-6 border-2 ${
-                  isEssay
-                    ? 'border-yellow-200'
-                    : isCorrect
+                className={`bg-white rounded-xl shadow-lg p-6 border-2 ${isEssay
+                  ? 'border-yellow-200'
+                  : isCorrect
                     ? 'border-green-200'
                     : 'border-red-200'
-                }`}
+                  }`}
               >
                 {/* Question Header */}
                 <div className="flex justify-between items-start mb-4">
@@ -245,11 +245,11 @@ const GradeQuiz = () => {
                       </span>
                     ) : isCorrect ? (
                       <span className="px-4 py-2 bg-green-100 text-green-700 font-semibold rounded-lg">
-                        ✓ Correct
+                        <Check className="inline-block mr-1" size={16} /> Correct
                       </span>
                     ) : (
                       <span className="px-4 py-2 bg-red-100 text-red-700 font-semibold rounded-lg">
-                        ✗ Incorrect
+                        <X className="inline-block mr-1" size={16} /> Incorrect
                       </span>
                     )}
                   </div>

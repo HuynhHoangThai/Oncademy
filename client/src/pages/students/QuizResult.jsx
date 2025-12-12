@@ -4,6 +4,7 @@ import { useAuth } from '@clerk/clerk-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import Loading from '../../components/students/Loading';
+import { Check, X } from 'lucide-react';
 
 const QuizResult = () => {
   const { quizId, attemptId } = useParams();
@@ -106,9 +107,8 @@ const QuizResult = () => {
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className={`text-6xl font-bold ${
-                      passed ? 'text-green-600' : scorePercentage >= 50 ? 'text-orange-600' : 'text-red-600'
-                    }`}>
+                    <span className={`text-6xl font-bold ${passed ? 'text-green-600' : scorePercentage >= 50 ? 'text-orange-600' : 'text-red-600'
+                      }`}>
                       {scorePercentage.toFixed(0)}%
                     </span>
                     <span className="text-gray-500 text-base mt-2">Score</span>
@@ -116,11 +116,10 @@ const QuizResult = () => {
                 </div>
 
                 {/* Pass/Fail Badge */}
-                <div className={`px-8 py-4 rounded-full shadow-lg ${
-                  passed 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-red-100 text-red-800'
-                }`}>
+                <div className={`px-8 py-4 rounded-full shadow-lg ${passed
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-red-100 text-red-800'
+                  }`}>
                   <div className="flex items-center gap-3">
                     {passed ? (
                       <>
@@ -168,13 +167,12 @@ const QuizResult = () => {
               {result.answers.map((answer, index) => (
                 <div
                   key={index}
-                  className={`border-2 rounded-lg p-4 ${
-                    answer.isCorrect === true
-                      ? 'border-green-300 bg-green-50'
-                      : answer.isCorrect === false
+                  className={`border-2 rounded-lg p-4 ${answer.isCorrect === true
+                    ? 'border-green-300 bg-green-50'
+                    : answer.isCorrect === false
                       ? 'border-red-300 bg-red-50'
                       : 'border-gray-300 bg-gray-50'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="font-semibold text-gray-800">
@@ -183,12 +181,12 @@ const QuizResult = () => {
                     <div className="flex items-center gap-2">
                       {answer.isCorrect === true && (
                         <span className="text-green-600 font-semibold">
-                          ✓ Correct ({answer.pointsEarned} pts)
+                          <Check className="inline-block mr-1" size={16} /> Correct ({answer.pointsEarned} pts)
                         </span>
                       )}
                       {answer.isCorrect === false && (
                         <span className="text-red-600 font-semibold">
-                          ✗ Incorrect (0 pts)
+                          <X className="inline-block mr-1" size={16} /> Incorrect (0 pts)
                         </span>
                       )}
                       {answer.isCorrect === null && (
@@ -198,7 +196,7 @@ const QuizResult = () => {
                       )}
                     </div>
                   </div>
-                  
+
                   {answer.feedback && (
                     <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
                       <p className="font-semibold text-blue-800 mb-1">Feedback:</p>
@@ -246,10 +244,10 @@ const QuizResult = () => {
                 <div
                   key={result.questionId}
                   className={`border-l-4 p-4 rounded-r-lg shadow-sm ${result.isCorrect === true
-                      ? 'border-green-500 bg-green-50'
-                      : result.isCorrect === false
-                        ? 'border-red-500 bg-red-50'
-                        : 'border-gray-500 bg-gray-50'
+                    ? 'border-green-500 bg-green-50'
+                    : result.isCorrect === false
+                      ? 'border-red-500 bg-red-50'
+                      : 'border-gray-500 bg-gray-50'
                     }`}
                 >
                   {/* Question */}
@@ -259,7 +257,7 @@ const QuizResult = () => {
                   <div className="bg-white rounded-lg p-3 mb-2 border border-gray-200">
                     <p className={`text-sm font-medium ${result.isCorrect ? 'text-green-700' : 'text-red-700'}`}>
                       Your Answer: <span className="font-bold">{result.userAnswer || 'No Answer'}</span>
-                      {result.isCorrect ? ' (✓ Correct)' : ' (✗ Incorrect)'}
+                      {result.isCorrect ? <><Check className="inline-block mx-1" size={14} />(Correct)</> : <><X className="inline-block mx-1" size={14} />(Incorrect)</>}
                     </p>
                   </div>
 

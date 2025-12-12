@@ -24,7 +24,7 @@ const MyQuizResults = () => {
   const fetchMyAttempts = async () => {
     try {
       const token = await getToken();
-      
+
       const { data } = await axios.get(
         `${backendUrl}/api/quiz/my-attempts`,
         { headers: { Authorization: `Bearer ${token}` } }
@@ -48,7 +48,7 @@ const MyQuizResults = () => {
     if (filterStatus !== 'all' && attempt.status !== filterStatus) {
       return false;
     }
-    
+
     // Filter by search term
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
@@ -57,7 +57,7 @@ const MyQuizResults = () => {
         attempt.courseTitle?.toLowerCase().includes(term)
       );
     }
-    
+
     return true;
   });
 
@@ -71,8 +71,24 @@ const MyQuizResults = () => {
     return acc;
   }, {});
 
-  // Sort courses alphabetically and sort attempts within each course by date
-  const sortedCourses = Object.keys(attemptsByCourse).sort();
+  // Sort courses alphabetically or by average score
+  const sortedCourses = Object.keys(attemptsByCourse).sort((courseA, courseB) => {
+    if (sortBy === 'score') {
+      // Calculate average score for each course
+      const getAvgScore = (courseTitle) => {
+        const completedAttempts = attemptsByCourse[courseTitle].filter(
+          a => (a.status === 'completed' || a.status === 'graded') && a.scoring
+        );
+        if (completedAttempts.length === 0) return 0;
+        return completedAttempts.reduce((sum, a) => sum + (a.scoring?.scorePercentage || 0), 0) / completedAttempts.length;
+      };
+      return getAvgScore(courseB) - getAvgScore(courseA); // Highest first
+    } else {
+      return courseA.localeCompare(courseB); // Alphabetically
+    }
+  });
+
+  // Sort attempts within each course
   sortedCourses.forEach(courseTitle => {
     attemptsByCourse[courseTitle].sort((a, b) => {
       if (sortBy === 'score') {
@@ -190,8 +206,8 @@ const MyQuizResults = () => {
             </svg>
             <p className="text-gray-500 text-lg font-medium">No quiz attempts found</p>
             <p className="text-gray-400 text-sm mt-2">
-              {searchTerm || filterStatus !== 'all' 
-                ? 'Try adjusting your filters' 
+              {searchTerm || filterStatus !== 'all'
+                ? 'Try adjusting your filters'
                 : 'Start taking quizzes to see your results here'}
             </p>
           </div>
@@ -222,7 +238,7 @@ const MyQuizResults = () => {
                         );
                         if (completedAttempts.length === 0) return 'N/A';
                         const avg = completedAttempts.reduce(
-                          (sum, a) => sum + (a.scoring?.scorePercentage || 0), 
+                          (sum, a) => sum + (a.scoring?.scorePercentage || 0),
                           0
                         ) / completedAttempts.length;
                         return `${avg.toFixed(1)}%`;
@@ -234,106 +250,106 @@ const MyQuizResults = () => {
                 {/* Quiz Attempts for this Course */}
                 <div className="space-y-3 pl-4">
                   {attemptsByCourse[courseTitle].map((attempt) => (
-              <div
-                key={attempt._id}
-                className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 hover:shadow-xl transition-shadow cursor-pointer"
-                onClick={() => navigate(`/quiz/${attempt.quizId}/result/${attempt._id}`)}
-              >
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                  {/* Left: Quiz Info */}
-                  <div className="flex-1">
-                    <div className="flex items-start gap-3 mb-2">
-                      <div className="bg-blue-100 p-2 rounded-lg">
-                        <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                        </svg>
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-lg font-bold text-gray-800 mb-1">
-                          {attempt.quizTitle || 'Unknown Quiz'}
-                        </h3>
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <span>Attempt #{attempt.attemptNumber}</span>
-                          <span className="text-gray-300">•</span>
-                          <span>{new Date(attempt.submittedAt).toLocaleDateString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric', 
-                            year: 'numeric' 
-                          })}</span>
-                          {attempt.timeSpent && (
-                            <>
-                              <span className="text-gray-300">•</span>
-                              <span>{Math.floor(attempt.timeSpent / 60)}m {attempt.timeSpent % 60}s</span>
-                            </>
-                          )}
+                    <div
+                      key={attempt._id}
+                      className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 hover:shadow-xl transition-shadow cursor-pointer"
+                      onClick={() => navigate(`/quiz/${attempt.quizId}/result/${attempt._id}`)}
+                    >
+                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        {/* Left: Quiz Info */}
+                        <div className="flex-1">
+                          <div className="flex items-start gap-3 mb-2">
+                            <div className="bg-blue-100 p-2 rounded-lg">
+                              <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                              </svg>
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="text-lg font-bold text-gray-800 mb-1">
+                                {attempt.quizTitle || 'Unknown Quiz'}
+                              </h3>
+                              <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <span>Attempt #{attempt.attemptNumber}</span>
+                                <span className="text-gray-300">•</span>
+                                <span>{new Date(attempt.submittedAt).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric'
+                                })}</span>
+                                {attempt.timeSpent && (
+                                  <>
+                                    <span className="text-gray-300">•</span>
+                                    <span>{Math.floor(attempt.timeSpent / 60)}m {attempt.timeSpent % 60}s</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(attempt.status)}`}>
+                              {attempt.status}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(attempt.status)}`}>
-                        {attempt.status}
-                      </span>
-                    </div>
-                  </div>
 
-                  {/* Right: Score Display */}
-                  {(attempt.status === 'completed' || attempt.status === 'graded') && attempt.scoring ? (
-                    <div className="flex items-center gap-6">
-                      {/* Score Percentage */}
-                      <div className="text-center">
-                        <p className="text-sm text-gray-600 mb-1">Score</p>
-                        <p className={`text-4xl font-bold ${getScoreColor(attempt.scoring.scorePercentage)}`}>
-                          {attempt.scoring.scorePercentage.toFixed(1)}%
-                        </p>
-                      </div>
+                        {/* Right: Score Display */}
+                        {(attempt.status === 'completed' || attempt.status === 'graded') && attempt.scoring ? (
+                          <div className="flex items-center gap-6">
+                            {/* Score Percentage */}
+                            <div className="text-center">
+                              <p className="text-sm text-gray-600 mb-1">Score</p>
+                              <p className={`text-4xl font-bold ${getScoreColor(attempt.scoring.scorePercentage)}`}>
+                                {attempt.scoring.scorePercentage.toFixed(1)}%
+                              </p>
+                            </div>
 
-                      {/* Points */}
-                      <div className="text-center">
-                        <p className="text-sm text-gray-600 mb-1">Points</p>
-                        <p className="text-2xl font-bold text-gray-700">
-                          {attempt.scoring.pointsEarned}/{attempt.scoring.totalPoints}
-                        </p>
-                      </div>
+                            {/* Points */}
+                            <div className="text-center">
+                              <p className="text-sm text-gray-600 mb-1">Points</p>
+                              <p className="text-2xl font-bold text-gray-700">
+                                {attempt.scoring.pointsEarned}/{attempt.scoring.totalPoints}
+                              </p>
+                            </div>
 
-                      {/* Pass/Fail Badge */}
-                      <div className="text-center">
-                        {attempt.scoring.passed ? (
-                          <div className="flex flex-col items-center">
-                            <svg className="w-12 h-12 text-green-500 mb-1" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
-                            <span className="text-sm font-semibold text-green-700">Passed</span>
+                            {/* Pass/Fail Badge */}
+                            <div className="text-center">
+                              {attempt.scoring.passed ? (
+                                <div className="flex flex-col items-center">
+                                  <svg className="w-12 h-12 text-green-500 mb-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                  </svg>
+                                  <span className="text-sm font-semibold text-green-700">Passed</span>
+                                </div>
+                              ) : (
+                                <div className="flex flex-col items-center">
+                                  <svg className="w-12 h-12 text-red-500 mb-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                  </svg>
+                                  <span className="text-sm font-semibold text-red-700">Failed</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        ) : (
-                          <div className="flex flex-col items-center">
-                            <svg className="w-12 h-12 text-red-500 mb-1" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        ) : attempt.status === 'pending' ? (
+                          <div className="text-center px-6 py-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                            <svg className="w-12 h-12 text-yellow-600 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            <span className="text-sm font-semibold text-red-700">Failed</span>
+                            <p className="text-sm font-semibold text-yellow-800">Awaiting Grading</p>
+                            <p className="text-xs text-yellow-600 mt-1">Essay questions being reviewed</p>
                           </div>
-                        )}
+                        ) : null}
+                      </div>
+
+                      {/* View Details Link */}
+                      <div className="mt-4 pt-4 border-t border-gray-200 flex justify-end">
+                        <button className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm">
+                          View Details
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
                       </div>
                     </div>
-                  ) : attempt.status === 'pending' ? (
-                    <div className="text-center px-6 py-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                      <svg className="w-12 h-12 text-yellow-600 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <p className="text-sm font-semibold text-yellow-800">Awaiting Grading</p>
-                      <p className="text-xs text-yellow-600 mt-1">Essay questions being reviewed</p>
-                    </div>
-                  ) : null}
-                </div>
-
-                {/* View Details Link */}
-                <div className="mt-4 pt-4 border-t border-gray-200 flex justify-end">
-                  <button className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm">
-                    View Details
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            ))}
+                  ))}
                 </div>
               </div>
             ))}
