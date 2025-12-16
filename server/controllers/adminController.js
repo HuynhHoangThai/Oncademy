@@ -305,14 +305,17 @@ const calculateGlobalStats = async () => {
 
     const stats = purchaseStats[0] || {};
 
-    const userIds = recentEnrollments.map(e => e.userId);
+    // Filter out enrollments with null courseId
+    const validEnrollments = recentEnrollments.filter(e => e.courseId !== null);
+
+    const userIds = validEnrollments.map(e => e.userId);
     const userMap = {};
     if (userIds.length > 0) {
         const usersData = await User.find({ _id: { $in: userIds } }).select('name').lean();
         usersData.forEach(u => userMap[u._id] = u.name);
     }
 
-    const finalRecentEnrollments = recentEnrollments.map(e => ({
+    const finalRecentEnrollments = validEnrollments.map(e => ({
         studentName: userMap[e.userId] || 'Unknown User',
         courseTitle: e.courseId.courseTitle,
         amount: e.amount,
