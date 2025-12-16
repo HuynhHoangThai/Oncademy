@@ -55,16 +55,24 @@
 <body>
     <div class="preview-container">
         <div class="preview-header">
-            <h1>📧 Oncademy Email Templates Preview</h1>
-            <p style="color: #666;">Preview các email templates được gửi tự động</p>
+            <h1><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    style="vertical-align: middle; margin-right: 8px;">
+                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                    <path d="m2 7 10 7 10-7" />
+                </svg> Oncademy Email Templates Preview</h1>
+            <p style="color: #666;">Preview of automatically sent email templates</p>
         </div>
 
         <!-- Template 1: Course Enrollment -->
         <div class="template-section">
-            <div class="template-title">1. 🎓 Email Đăng Ký Khóa Học Thành Công</div>
+            <div class="template-title">1. <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
+                    <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                    <path d="M6 12v5c3 3 9 3 12 0v-5" />
+                </svg> Course Enrollment Success Email</div>
             <div class="template-description">
-                <strong>Khi nào gửi:</strong> Sau khi thanh toán Stripe thành công<br>
-                <strong>Người nhận:</strong> Student vừa mua khóa học
+                <strong>When to send:</strong> After successful Stripe payment<br>
+                <strong>Recipient:</strong> Student who just purchased the course
             </div>
             <iframe srcdoc='
 <!DOCTYPE html>
@@ -72,7 +80,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng ký khóa học thành công</title>
+    <title>Course Enrollment Successful</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: &apos;Segoe UI&apos;, Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
     <table role="presentation" style="width: 100%; border-collapse: collapse;">
@@ -82,37 +90,38 @@
                     <tr>
                         <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
                             <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">
-                                Chúc mừng!
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                                Congratulations!
                             </h1>
                         </td>
                     </tr>
                     <tr>
                         <td style="padding: 40px 30px;">
                             <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
-                                Xin chào <strong>Nguyễn Văn A</strong>,
+                                Hello <strong>John Doe</strong>,
                             </p>
                             <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
-                                Bạn đã đăng ký thành công khóa học:
+                                You have successfully enrolled in the course:
                             </p>
                             <div style="background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 20px 0; border-radius: 4px;">
                                 <h2 style="margin: 0; color: #667eea; font-size: 20px; font-weight: 600;">
-                                    React Advanced - Xây dựng ứng dụng thực tế
+                                    React Advanced - Building Real-World Applications
                                 </h2>
                             </div>
                             <p style="margin: 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">
-                                Thanh toán của bạn đã được xác nhận thành công. Bây giờ bạn có thể bắt đầu học ngay!
+                                Your payment has been successfully confirmed. You can now start learning right away!
                             </p>
                             <table role="presentation" style="margin: 30px 0;">
                                 <tr>
                                     <td align="center">
                                         <a href="#" style="display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 8px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">
-                                            Bắt đầu học ngay
+                                            Start Learning Now
                                         </a>
                                     </td>
                                 </tr>
                             </table>
                             <p style="margin: 20px 0 0; color: #666666; font-size: 14px; line-height: 1.6;">
-                                Chúc bạn học tập hiệu quả! 
+                                Happy learning! 
                             </p>
                         </td>
                     </tr>
@@ -122,7 +131,7 @@
                                 © 2025 Oncademy. All rights reserved.
                             </p>
                             <p style="margin: 0; color: #999999; font-size: 12px;">
-                                Email này được gửi tự động, vui lòng không trả lời.
+                                This email was sent automatically, please do not reply.
                             </p>
                         </td>
                     </tr>
@@ -137,17 +146,21 @@
 
         <!-- Template 2: Educator Approval -->
         <div class="template-section">
-            <div class="template-title">2. ✅ Email Chấp Nhận Đơn Giảng Viên</div>
+            <div class="template-title">2. <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                </svg> Educator Application Approval Email</div>
             <div class="template-description">
-                <strong>Khi nào gửi:</strong> Khi admin approve educator application<br>
-                <strong>Người nhận:</strong> User được approve làm educator
+                <strong>When to send:</strong> When admin approves educator application<br>
+                <strong>Recipient:</strong> User approved as educator
             </div>
             <iframe srcdoc='
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Đơn giảng viên được chấp nhận</title>
+    <title>Educator Application Approved</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: &apos;Segoe UI&apos;, Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
     <table role="presentation" style="width: 100%; border-collapse: collapse;">
@@ -157,26 +170,27 @@
                     <tr>
                         <td style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); padding: 40px 30px; text-align: center;">
                             <h1 style="margin: 0; color: #ffffff; font-size: 28px;">
-                                🎊 Chúc mừng!
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 8px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                                Congratulations!
                             </h1>
                         </td>
                     </tr>
                     <tr>
                         <td style="padding: 40px 30px;">
                             <p style="margin: 0 0 20px; color: #333333; font-size: 16px;">
-                                Xin chào <strong>Trần Thị B</strong>,
+                                Hello <strong>Jane Smith</strong>,
                             </p>
                             <p style="margin: 0 0 20px; color: #333333; font-size: 16px;">
-                                Đơn đăng ký làm giảng viên của bạn đã được <strong style="color: #11998e;">CHẤP NHẬN</strong>!
+                                Your educator application has been <strong style="color: #11998e;">APPROVED</strong>!
                             </p>
                             <p style="margin: 0 0 20px; color: #333333; font-size: 16px;">
-                                Bây giờ bạn có thể bắt đầu tạo và quản lý các khóa học của riêng mình.
+                                You can now start creating and managing your own courses.
                             </p>
                             <table role="presentation" style="margin: 30px 0;">
                                 <tr>
                                     <td align="center">
                                         <a href="#" style="display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 8px;">
-                                            Đi tới Dashboard Giảng viên
+                                            Go to Educator Dashboard
                                         </a>
                                     </td>
                                 </tr>
@@ -201,17 +215,22 @@
 
         <!-- Template 3: Educator Rejection -->
         <div class="template-section">
-            <div class="template-title">3. ❌ Email Từ Chối Đơn Giảng Viên</div>
+            <div class="template-title">3. <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                </svg> Educator Application Rejection Email</div>
             <div class="template-description">
-                <strong>Khi nào gửi:</strong> Khi admin reject educator application<br>
-                <strong>Người nhận:</strong> User bị reject
+                <strong>When to send:</strong> When admin rejects educator application<br>
+                <strong>Recipient:</strong> Rejected user
             </div>
             <iframe srcdoc='
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Thông báo đơn giảng viên</title>
+    <title>Educator Application Notification</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: &apos;Segoe UI&apos;, Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
     <table role="presentation" style="width: 100%; border-collapse: collapse;">
@@ -221,23 +240,23 @@
                     <tr>
                         <td style="background-color: #f44336; padding: 40px 30px; text-align: center;">
                             <h1 style="margin: 0; color: #ffffff; font-size: 28px;">
-                                Thông báo đơn đăng ký
+                                Application Notification
                             </h1>
                         </td>
                     </tr>
                     <tr>
                         <td style="padding: 40px 30px;">
                             <p style="margin: 0 0 20px; color: #333333; font-size: 16px;">
-                                Xin chào <strong>Lê Văn C</strong>,
+                                Hello <strong>Alex Johnson</strong>,
                             </p>
                             <p style="margin: 0 0 20px; color: #333333; font-size: 16px;">
-                                Rất tiếc, đơn đăng ký làm giảng viên của bạn chưa được chấp nhận lúc này.
+                                Unfortunately, your educator application has not been approved at this time.
                             </p>
                             <p style="margin: 0 0 20px; color: #333333; font-size: 16px;">
-                                Bạn có thể nộp đơn lại sau hoặc liên hệ với chúng tôi để biết thêm chi tiết.
+                                You may reapply later or contact us for more details.
                             </p>
                             <p style="margin: 20px 0 0; color: #666666; font-size: 14px;">
-                                Cảm ơn bạn đã quan tâm đến Oncademy! 🙏
+                                Thank you for your interest in Oncademy!
                             </p>
                         </td>
                     </tr>
@@ -258,14 +277,19 @@
         </div>
 
         <div style="text-align: center; padding: 40px; background: white; border-radius: 8px; margin-top: 40px;">
-            <h3>🎨 Customization</h3>
+            <h3><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    style="vertical-align: middle; margin-right: 8px;">
+                    <path
+                        d="M12 2a10 10 0 0 0-9.95 9h11.64L9.74 7.05a1 1 0 0 1 1.41-1.41l5.66 5.65a1 1 0 0 1 0 1.42l-5.66 5.65a1 1 0 0 1-1.41 0 1 1 0 0 1 0-1.41L13.69 13H2.05A10 10 0 1 0 12 2z" />
+                    <circle cx="12" cy="12" r="3" />
+                </svg> Customization</h3>
             <p style="color: #666;">
-                Bạn có thể chỉnh sửa các templates trong file:<br>
+                You can edit the templates in the file:<br>
                 <code
                     style="background: #f0f0f0; padding: 4px 8px; border-radius: 4px;">server/utils/emailService.js</code>
             </p>
             <p style="color: #666; margin-top: 20px;">
-                <strong>Hướng dẫn setup:</strong> Xem file <code>EMAIL_SETUP_GUIDE.md</code>
+                <strong>Setup guide:</strong> See file <code>EMAIL_SETUP_GUIDE.md</code>
             </p>
         </div>
     </div>
