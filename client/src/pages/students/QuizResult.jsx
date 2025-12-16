@@ -159,56 +159,6 @@ const QuizResult = () => {
           )}
         </div>
 
-        {/* Question Review */}
-        {!isPending && result.answers && result.answers.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-xl p-6 mb-8 border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Question Review</h2>
-            <div className="space-y-4">
-              {result.answers.map((answer, index) => (
-                <div
-                  key={index}
-                  className={`border-2 rounded-lg p-4 ${answer.isCorrect === true
-                    ? 'border-green-300 bg-green-50'
-                    : answer.isCorrect === false
-                      ? 'border-red-300 bg-red-50'
-                      : 'border-gray-300 bg-gray-50'
-                    }`}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-gray-800">
-                      Question {index + 1}
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      {answer.isCorrect === true && (
-                        <span className="text-green-600 font-semibold">
-                          <Check className="inline-block mr-1" size={16} /> Correct ({answer.pointsEarned} pts)
-                        </span>
-                      )}
-                      {answer.isCorrect === false && (
-                        <span className="text-red-600 font-semibold">
-                          <X className="inline-block mr-1" size={16} /> Incorrect (0 pts)
-                        </span>
-                      )}
-                      {answer.isCorrect === null && (
-                        <span className="text-gray-600 font-semibold">
-                          Manual Grading Required
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {answer.feedback && (
-                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
-                      <p className="font-semibold text-blue-800 mb-1">Feedback:</p>
-                      <p className="text-blue-700">{answer.feedback}</p>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Submission Info */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border border-gray-200">
           <h3 className="font-semibold text-gray-800 mb-3">Submission Details</h3>
@@ -238,52 +188,119 @@ const QuizResult = () => {
 
         {!isPending && detailedResults && detailedResults.length > 0 && (
           <div className="bg-white rounded-2xl shadow-xl p-6 mb-8 border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Question Review (Q&A)</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+              <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Question Review
+            </h2>
             <div className="space-y-6">
               {detailedResults.map((result, index) => (
                 <div
                   key={result.questionId}
-                  className={`border-l-4 p-4 rounded-r-lg shadow-sm ${result.isCorrect === true
-                    ? 'border-green-500 bg-green-50'
+                  className={`border-2 rounded-xl p-5 shadow-md ${result.isCorrect === true
+                    ? 'border-green-400 bg-green-50'
                     : result.isCorrect === false
-                      ? 'border-red-500 bg-red-50'
-                      : 'border-gray-500 bg-gray-50'
+                      ? 'border-red-400 bg-red-50'
+                      : 'border-gray-400 bg-gray-50'
                     }`}
                 >
-                  {/* Question */}
-                  <p className="font-semibold text-gray-800 mb-2">Question {index + 1}: {result.questionText}</p>
-
-                  {/* User Answer */}
-                  <div className="bg-white rounded-lg p-3 mb-2 border border-gray-200">
-                    <p className={`text-sm font-medium ${result.isCorrect ? 'text-green-700' : 'text-red-700'}`}>
-                      Your Answer: <span className="font-bold">{result.userAnswer || 'No Answer'}</span>
-                      {result.isCorrect ? <><Check className="inline-block mx-1" size={14} />(Correct)</> : <><X className="inline-block mx-1" size={14} />(Incorrect)</>}
-                    </p>
+                  {/* Question Header */}
+                  <div className="flex items-start justify-between mb-4">
+                    <h3 className="font-bold text-lg text-gray-800">Question {index + 1}</h3>
+                    <div className="flex items-center gap-2">
+                      {result.isCorrect === true && (
+                        <span className="px-3 py-1 bg-green-600 text-white text-sm font-semibold rounded-full flex items-center gap-1">
+                          <Check size={16} /> Correct ({result.pointsEarned || 0} pts)
+                        </span>
+                      )}
+                      {result.isCorrect === false && (
+                        <span className="px-3 py-1 bg-red-600 text-white text-sm font-semibold rounded-full flex items-center gap-1">
+                          <X size={16} /> Incorrect (0 pts)
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Correct Answer (Conditional Display) */}
-                  {result.correctAnswerData && (
-                    <div className="mt-2 text-sm text-blue-700 bg-blue-50 p-3 rounded-lg">
-                      <p className="font-semibold mb-1">Correct Answer:</p>
+                  {/* Question Text */}
+                  <div className="bg-white rounded-lg p-4 mb-4 border border-gray-300">
+                    <p className="text-gray-800 font-medium">{result.questionText}</p>
+                  </div>
 
-                      {/* Handling MC/TrueFalse/Fill in the Blank */}
-                      {result.correctAnswerData.correctOptions && (
-                        <p>- {result.correctAnswerData.correctOptions.map(opt => opt.optionText).join(' / ')}</p>
-                      )}
-                      {result.correctAnswerData.correctAnswers && (
-                        <p>- {result.correctAnswerData.correctAnswers.join(' HOẶC ')}</p>
-                      )}
-                      {result.correctAnswerData.rubric && (
-                        <p className="text-xs text-purple-700 mt-2">Rubric: {result.correctAnswerData.rubric}</p>
-                      )}
+                  {/* Answer Options (if available) */}
+                  {result.correctAnswerData?.correctOptions && (
+                    <div className="mb-4">
+                      <p className="text-sm font-semibold text-gray-700 mb-2">Answer Options:</p>
+                      <div className="space-y-2">
+                        {result.correctAnswerData.correctOptions.map((option, optIndex) => {
+                          const isCorrect = option.isCorrect;
+                          const isUserAnswer = result.userAnswer === option.optionText;
+
+                          return (
+                            <div
+                              key={optIndex}
+                              className={`p-3 rounded-lg border-2 flex items-start gap-2 ${isCorrect
+                                  ? 'border-green-500 bg-green-100'
+                                  : isUserAnswer
+                                    ? 'border-red-500 bg-red-100'
+                                    : 'border-gray-300 bg-white'
+                                }`}
+                            >
+                              {isCorrect ? (
+                                <Check className="text-green-600 mt-0.5 flex-shrink-0" size={20} />
+                              ) : isUserAnswer ? (
+                                <X className="text-red-600 mt-0.5 flex-shrink-0" size={20} />
+                              ) : (
+                                <div className="w-5 h-5 rounded-full border-2 border-gray-400 flex-shrink-0 mt-0.5"></div>
+                              )}
+                              <div className="flex-1">
+                                <p className={`${isCorrect ? 'font-bold text-green-800' : isUserAnswer ? 'font-semibold text-red-800' : 'text-gray-700'}`}>
+                                  {option.optionText}
+                                </p>
+                                {isCorrect && (
+                                  <span className="text-xs text-green-700 font-medium">✓ Correct Answer</span>
+                                )}
+                                {isUserAnswer && !isCorrect && (
+                                  <span className="text-xs text-red-700 font-medium">✗ Your Answer</span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* User Answer (for non-MC questions) */}
+                  {!result.correctAnswerData?.correctOptions && (
+                    <div className={`p-4 rounded-lg border-2 mb-4 ${result.isCorrect ? 'bg-green-100 border-green-500' : 'bg-red-100 border-red-500'}`}>
+                      <p className="text-sm font-semibold text-gray-700 mb-1">Your Answer:</p>
+                      <p className={`font-medium ${result.isCorrect ? 'text-green-800' : 'text-red-800'}`}>
+                        {result.userAnswer || 'No Answer'}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Correct Answer for Fill-in-the-blank */}
+                  {!result.correctAnswerData?.correctOptions && result.correctAnswerData?.correctAnswers && (
+                    <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-400 mb-4">
+                      <p className="text-sm font-semibold text-blue-800 mb-1">Correct Answer(s):</p>
+                      <p className="text-blue-900 font-medium">
+                        {result.correctAnswerData.correctAnswers.join(' OR ')}
+                      </p>
                     </div>
                   )}
 
                   {/* Explanation */}
                   {result.explanation && (
-                    <div className="mt-2 text-sm text-gray-600">
-                      <p className="font-semibold">Explanation:</p>
-                      <p>{result.explanation}</p>
+                    <div className="bg-purple-50 p-4 rounded-lg border-l-4 border-purple-500">
+                      <p className="text-sm font-bold text-purple-800 mb-2 flex items-center gap-2">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Explanation:
+                      </p>
+                      <p className="text-gray-700 leading-relaxed">{result.explanation}</p>
                     </div>
                   )}
 

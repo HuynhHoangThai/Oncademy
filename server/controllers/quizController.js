@@ -847,9 +847,7 @@ const getQuizAttempt = async (req, res) => {
       return res.json({ success: false, message: 'User not authenticated' });
     }
 
-    const attempt = await QuizAttempt.findById(attemptId)
-      .populate('quizId', 'quizTitle quizDescription')
-      .lean();
+    const attempt = await QuizAttempt.findById(attemptId).lean();
 
     if (!attempt) {
       return res.json({ success: false, message: 'Quiz attempt not found' });
@@ -860,7 +858,60 @@ const getQuizAttempt = async (req, res) => {
       return res.json({ success: false, message: 'Unauthorized access' });
     }
 
-    res.json({ success: true, attempt });
+    // Fetch full quiz data to get questions, options, and explanations
+    const quiz = await Quiz.findById(attempt.quizId).lean();
+
+    if (!quiz) {
+      return res.json({ success: false, message: 'Quiz not found' });
+    }
+
+    // Build detailed results with question text, options, correct answers, and explanations
+    const detailedResults = quiz.questions.map(question => {
+      const userAnswer = attempt.answers.find(a => a.questionId === question.questionId);
+
+      // Build correct answer data
+      const correctAnswerData = {};
+
+      if (question.questionType === 'multiple-choice' || question.questionType === 'true-false') {
+        // Include all options with isCorrect flag for proper display
+        correctAnswerData.correctOptions = question.options;
+      } else if (question.questionType === 'fill-blank') {
+        correctAnswerData.correctAnswers = question.correctAnswers;
+      } else if (question.questionType === 'essay') {
+        correctAnswerData.rubric = question.rubric;
+      }
+
+      // Get user's answer text (for MC/TF, convert optionId to optionText)
+      let userAnswerText = userAnswer?.answer || null;
+      if ((question.questionType === 'multiple-choice' || question.questionType === 'true-false') && userAnswerText) {
+        const selectedOption = question.options.find(opt => opt.optionId === userAnswerText);
+        userAnswerText = selectedOption?.optionText || userAnswerText;
+      }
+
+      return {
+        questionId: question.questionId,
+        questionText: question.questionText,
+        questionType: question.questionType,
+        userAnswer: userAnswerText,
+        isCorrect: userAnswer?.isCorrect,
+        points: question.points,
+        pointsEarned: userAnswer?.pointsEarned || 0,
+        correctAnswerData: quiz.showCorrectAnswers ? correctAnswerData : null,
+        explanation: quiz.showCorrectAnswers ? question.explanation : null
+      };
+    });
+
+    // Add quiz title and description
+    attempt.quizTitle = quiz.quizTitle;
+    attempt.quizDescription = quiz.quizDescription;
+
+    // Add detailed results to response
+    const response = {
+      ...attempt,
+      detailedResults
+    };
+
+    res.json({ success: true, attempt: response });
   } catch (error) {
     console.error('Get quiz attempt error:', error);
     res.json({ success: false, message: error.message });
