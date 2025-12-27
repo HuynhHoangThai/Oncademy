@@ -4,7 +4,7 @@ import { AppContext } from '../../context/AppContext'
 import { useUser, useClerk } from '@clerk/clerk-react'
 
 const PathwayCard = ({ pathway }) => {
-    const { currency, calculateRating, toggleFavoritePathway, isPathwayFavorite, favoritePathways } = useContext(AppContext);
+    const { currency, calculateRating, toggleFavoritePathway, isPathwayFavorite, favoritePathways, addToViewHistory } = useContext(AppContext);
 
     const { user } = useUser();
     const { openSignIn } = useClerk();
@@ -20,11 +20,16 @@ const PathwayCard = ({ pathway }) => {
         toggleFavoritePathway(pathway._id);
     };
 
+    const handleLinkClick = () => {
+        scrollTo(0, 0);
+        addToViewHistory(pathway._id, true);
+    };
+
     // Pathways use "Phases" instead of ratings usually, but we can show rating if available
     // For now, let's show Phases count as key stat
 
     return (
-        <div className="relative bg-white border border-teal-200 shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg overflow-hidden group">
+        <div className="relative bg-white border border-teal-200 shadow-md hover:shadow-lg transition-shadow duration-300 rounded-lg overflow-hidden group h-full flex flex-col">
             <div className="absolute top-3 left-3 z-10 bg-gradient-to-r from-teal-600 to-emerald-600 text-white text-xs px-2 py-1 rounded-full font-bold shadow-sm">
                 COMBO
             </div>
@@ -50,8 +55,8 @@ const PathwayCard = ({ pathway }) => {
                 </svg>
             </button>
 
-            <Link to={'/pathway/' + pathway._id} onClick={() => scrollTo(0, 0)} className="block">
-                <div className="overflow-hidden">
+            <Link to={'/pathway/' + pathway._id} onClick={handleLinkClick} className="flex flex-col h-full">
+                <div className="overflow-hidden rounded-t-lg relative">
                     <img
                         className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                         src={pathway.pathwayThumbnail}
@@ -59,12 +64,12 @@ const PathwayCard = ({ pathway }) => {
                         loading="lazy"
                     />
                 </div>
-                <div className="p-4 text-left">
+                <div className="p-4 text-left flex flex-col flex-1">
                     <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2 min-h-[3.5rem] group-hover:text-teal-600 transition-colors">
                         {pathway.pathwayTitle}
                     </h3>
-                    <p className="text-sm text-gray-600 mb-3">{pathway.educator?.name || ''}</p>
-                    <div className="flex items-center gap-2 mb-3">
+                    <p className="text-sm text-gray-600 mb-2">{pathway.educator?.name || ''}</p>
+                    <div className="flex items-center gap-2 mb-3 mt-auto">
                         <span className="bg-teal-50 text-teal-700 text-xs px-2 py-1 rounded border border-teal-100 font-medium">
                             {pathway.phaseCount || pathway.phases?.length || 0} Phases
                         </span>
@@ -72,10 +77,12 @@ const PathwayCard = ({ pathway }) => {
                             {pathway.totalLectures || 0} Lectures
                         </span>
                     </div>
-                    <p className='text-lg font-semibold text-gray-800'>
-                        {currency}{(pathway.pathwayPrice - pathway.discount * pathway.pathwayPrice / 100).toFixed(2)}
-                        {pathway.discount > 0 && <span className="text-sm text-gray-400 line-through ml-2 font-normal">{currency}{pathway.pathwayPrice}</span>}
-                    </p>
+                    <div className='flex items-center gap-2'>
+                        <p className='text-lg font-semibold text-gray-800'>
+                            {currency}{(pathway.pathwayPrice - pathway.discount * pathway.pathwayPrice / 100).toFixed(2)}
+                        </p>
+                        {pathway.discount > 0 && <p className="text-sm text-gray-400 line-through font-normal">{currency}{pathway.pathwayPrice}</p>}
+                    </div>
                 </div>
             </Link>
         </div>

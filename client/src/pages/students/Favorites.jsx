@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { AppContext } from '../../context/AppContext';
+import { AppContext } from '../../context/AppContext.jsx';
 import CourseCard from '../../components/students/CourseCard';
 import PathwayCard from '../../components/students/PathwayCard';
 import { Link } from 'react-router-dom';

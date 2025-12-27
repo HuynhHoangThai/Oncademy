@@ -33,7 +33,7 @@ const CourseDetailPage = () => {
     calculateNoOfLectures,
     calculateRating,
     getTotalReviewCount,
-
+    enrolledCourses,
     toggleFavoriteCourse,
     isCourseFavorite,
     addToViewHistory } = useContext(AppContext);
@@ -65,11 +65,19 @@ const CourseDetailPage = () => {
     if (courseResponse?.courseData) {
       setCourseData(courseResponse.courseData);
       if (id) {
-        addToViewHistory(id);
+        addToViewHistory(id, false);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseResponse, id]);
+
+  // Check if user is already enrolled
+  useEffect(() => {
+    if (id && enrolledCourses) {
+      const isEnrolled = enrolledCourses.some(course => course._id === id);
+      _setIsAlreadyEnrolled(isEnrolled);
+    }
+  }, [id, enrolledCourses]);
 
   const toggleSection = (index) => {
     setOpenSections((prev) => ({
@@ -174,11 +182,8 @@ const CourseDetailPage = () => {
       } else {
         // Check if already enrolled
         if (data.alreadyEnrolled) {
-          toast.info(data.message || 'You are already enrolled in this course');
-          // Optionally redirect to My Enrollments
-          setTimeout(() => {
-            navigate('/my-enrollments');
-          }, 2000);
+          // Silently redirect to My Enrollments
+          navigate('/my-enrollments');
         } else {
           toast.error(data.message || 'Failed to create checkout session');
         }
@@ -195,8 +200,8 @@ const CourseDetailPage = () => {
   if (!courseData) return <Loading />;
 
   return (
-    <>
-      <div className="flex md:flex-row flex-col-reverse gap-8 md:gap-12 relative items-start justify-center md:px-36 px-8 md:pt-20 pt-10 text-left bg-gradient-to-b from-cyan-100/40 to-white pb-12">
+    <div className="min-h-screen flex flex-col">
+      <div className="flex md:flex-row flex-col-reverse gap-8 md:gap-12 relative items-start justify-center md:px-36 px-8 md:pt-20 pt-10 text-left bg-gradient-to-b from-cyan-100/40 to-white pb-12 flex-1">
         {/*left*/}
         <div className="flex-1 max-w-2xl text-black">
           <div className="flex items-start justify-between gap-3 mb-4">
@@ -279,7 +284,7 @@ const CourseDetailPage = () => {
           </div>
         </div>
         {/*right*/}
-        <div className="flex-shrink-0 md:sticky md:top-10">
+        <div className="flex-shrink-0 md:static md:top-10">
           <div className="w-full max-w-sm mx-auto">
             {/* Video/Image Container */}
             <div className="relative bg-white rounded-lg shadow-lg overflow-hidden">
@@ -418,7 +423,7 @@ const CourseDetailPage = () => {
         </div>
       </div>
       <Footer />
-    </>
+    </div>
   );
 };
 

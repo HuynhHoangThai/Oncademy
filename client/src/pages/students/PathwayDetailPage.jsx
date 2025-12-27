@@ -21,7 +21,7 @@ const PathwayDetailPage = () => {
     const [playerInstance, setPlayerInstance] = useState(null);
     const [previewInterval, setPreviewInterval] = useState(null);
     const [enrolling, setEnrolling] = useState(false);
-    const { currency, enrolledPathways } = useContext(AppContext);
+    const { currency, enrolledPathways, addToViewHistory } = useContext(AppContext);
     const { getToken, isSignedIn } = useAuth();
     const { user } = useUser();
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -36,6 +36,7 @@ const PathwayDetailPage = () => {
                 const { data } = await axios.get(`${backendUrl}/api/pathway/${id}`);
                 if (data.success) {
                     setPathway(data.pathwayData);
+                    if (id) addToViewHistory(id, true);
                 } else {
                     toast.error(data.message || 'Pathway not found');
                     navigate('/courses');

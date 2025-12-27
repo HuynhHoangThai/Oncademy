@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
@@ -12,13 +12,16 @@ import dayjs from 'dayjs';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 const QuizBuilder = () => {
-  const { courseId, quizId } = useParams(); // Add quizId for edit mode
+  const { courseId: resourceId, quizId } = useParams(); // resourceId can be courseId or pathwayId
+  const [searchParams] = useSearchParams();
+  const resourceType = searchParams.get('type') || 'course'; // 'course' or 'pathway'
   const navigate = useNavigate();
   const { getToken } = useAuth();
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
   const [deadline, setDeadline] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [course, setCourse] = useState(null);
+  const [course, setCourse] = useState(null); // For course
+  const [pathway, setPathway] = useState(null); // For pathway
   const [selectedChapter, setSelectedChapter] = useState('');
   const [selectedLecture, setSelectedLecture] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
@@ -40,27 +43,41 @@ const QuizBuilder = () => {
       setIsEditMode(true);
       fetchQuizData();
     } else {
-      fetchCourse();
+      fetchResource();
     }
     // eslint-disable-next-line
-  }, [quizId]);
+  }, [quizId, resourceType]);
 
-  const fetchCourse = async () => {
+  const fetchResource = async () => {
     try {
       const token = await getToken();
-      const { data } = await axios.get(`${backendUrl}/api/course/${courseId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
 
-      if (data.success) {
-        setCourse(data.courseData);
+      if (resourceType === 'pathway') {
+        const { data } = await axios.get(`${backendUrl}/api/pathway/${resourceId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (data.success) {
+          setPathway(data.pathwayCourse);
+        } else {
+          toast.error(data.message || 'Pathway not found');
+          navigate('/educator/quizzes');
+        }
       } else {
-        toast.error(data.message || 'Course not found');
-        navigate('/educator/quizzes');
+        const { data } = await axios.get(`${backendUrl}/api/course/${resourceId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (data.success) {
+          setCourse(data.courseData);
+        } else {
+          toast.error(data.message || 'Course not found');
+          navigate('/educator/quizzes');
+        }
       }
     } catch (error) {
-      console.error('Fetch course error:', error);
-      toast.error(error.response?.data?.message || 'Failed to load course');
+      console.error('Fetch resource error:', error);
+      toast.error(error.response?.data?.message || 'Failed to load resource');
       navigate('/educator/quizzes');
     } finally {
       setLoading(false);
@@ -323,7 +340,10 @@ const QuizBuilder = () => {
 
       const payload = {
         ...quizData,
-        courseId: isEditMode ? course._id : courseId,
+        ...(resourceType === 'pathway'
+          ? { pathwayId: isEditMode ? (pathway?._id || resourceId) : resourceId }
+          : { courseId: isEditMode ? (course?._id || resourceId) : resourceId }
+        ),
         chapterId: selectedChapter || undefined,
         lectureId: selectedLecture || undefined,
         attemptsAllowed: quizData.maxAttempts,
@@ -377,7 +397,11 @@ const QuizBuilder = () => {
           <h1 className="text-3xl font-bold text-blue-700">
             {isEditMode ? 'Edit Quiz' : 'Create New Quiz'}
           </h1>
-          <p className="text-gray-600 mt-1">Course: {course?.courseTitle}</p>
+          <p className="text-gray-600 mt-1">
+            {resourceType === 'pathway'
+              ? `Combo: ${pathway?.pathwayTitle || 'Loading...'}`
+              : `Course: ${course?.courseTitle || 'Loading...'}`}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">

@@ -1,16 +1,26 @@
 import { useContext } from 'react';
 import { AppContext } from '../../context/AppContext';
 import CourseCard from '../../components/students/CourseCard';
+import PathwayCard from '../../components/students/PathwayCard';
 import { Link } from 'react-router-dom';
 
 const ViewHistory = () => {
-  const { allCourses, viewHistory, clearViewHistory } = useContext(AppContext);
-  
-  // Get courses from view history
+  const { allCourses, allPathways, viewHistory, clearViewHistory, addToViewHistory } = useContext(AppContext);
+
+  // Get items from view history
   const historyList = viewHistory
     .map(item => {
-      const course = allCourses.find(course => course._id === item.courseId);
-      return course ? { ...course, viewDate: item.viewDate, timestamp: item.timestamp } : null;
+      const isPathway = item.isPathway;
+      const itemId = item.id || item.courseId; // Support both legacy and new format
+
+      let data = null;
+      if (isPathway) {
+        data = allPathways.find(p => p._id === itemId);
+      } else {
+        data = allCourses.find(c => c._id === itemId);
+      }
+
+      return data ? { ...data, isPathway, viewDate: item.viewDate, timestamp: item.timestamp } : null;
     })
     .filter(Boolean);
 
@@ -34,7 +44,7 @@ const ViewHistory = () => {
           </div>
         </div>
       </div>
-      
+
       <div className="min-h-screen bg-gray-50 -mt-4">
         <div className="max-w-7xl mx-auto py-10 px-4">
           {historyList.length === 0 ? (
@@ -46,8 +56,8 @@ const ViewHistory = () => {
               </div>
               <h3 className="text-xl font-medium text-gray-600 mb-2">No view history yet</h3>
               <p className="text-gray-500 mb-6">Start browsing courses to build your view history!</p>
-              <Link 
-                to="/courses" 
+              <Link
+                to="/courses"
                 className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
               >
                 Browse Courses
@@ -59,11 +69,15 @@ const ViewHistory = () => {
                 <p className="text-gray-600">{historyList.length} course{historyList.length !== 1 ? 's' : ''} in your history</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {historyList.map(course => (
-                  <div key={`${course._id}-${course.timestamp}`} className="relative">
-                    <CourseCard course={course} />
+                {historyList.map(item => (
+                  <div key={`${item._id}-${item.timestamp}`} className="relative">
+                    {item.isPathway ? (
+                      <PathwayCard pathway={item} />
+                    ) : (
+                      <CourseCard course={item} />
+                    )}
                     <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                      Viewed: {course.viewDate}
+                      Viewed: {item.viewDate}
                     </div>
                   </div>
                 ))}

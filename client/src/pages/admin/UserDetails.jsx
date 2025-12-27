@@ -181,10 +181,10 @@ const UserDetails = () => {
                         {user.createdCourses && user.createdCourses.length > 0 ? (
                             user.createdCourses.map(course => (
                                 <div key={course._id} className="p-4 border rounded-lg bg-gray-50">
-                                    <p className="font-semibold text-gray-800">{course.title}</p>
-                                    <p className="text-sm text-gray-600">Price: ${course.price}</p>
-                                    <p className={`text-xs font-medium ${course.published ? 'text-green-500' : 'text-red-500'}`}>
-                                        {course.published ? 'Published' : 'Draft'}
+                                    <p className="font-semibold text-gray-800">{course.courseTitle}</p>
+                                    <p className="text-sm text-gray-600">Price: ${course.coursePrice}</p>
+                                    <p className={`text-xs font-medium ${course.isPublished ? 'text-green-500' : 'text-red-500'}`}>
+                                        {course.isPublished ? 'Published' : 'Draft'}
                                     </p>
                                 </div>
                             ))
@@ -192,10 +192,54 @@ const UserDetails = () => {
                             <p className="text-gray-500">This educator has not created any courses yet.</p>
                         )}
                     </div>
+
+                    <h2 className="text-2xl font-semibold mt-8 mb-4 text-teal-700">Created Course Combo ({user.createdPathways?.length || 0})</h2>
+                    <div className="space-y-3">
+                        {user.createdPathways && user.createdPathways.length > 0 ? (
+                            user.createdPathways.map(pathway => (
+                                <div key={pathway._id} className="p-4 border rounded-lg bg-teal-50 border-teal-100">
+                                    <p className="font-semibold text-gray-800">{pathway.pathwayTitle}</p>
+                                    <p className="text-sm text-gray-600">Price: ${pathway.pathwayPrice}</p>
+                                    <p className={`text-xs font-medium ${pathway.isPublished ? 'text-green-500' : 'text-red-500'}`}>
+                                        {pathway.isPublished ? 'Published' : 'Draft'}
+                                    </p>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-gray-500">This educator has not created any course combos yet.</p>
+                        )}
+                    </div>
                 </div>
             ) : (
-                // 💡 CHI TIẾT DÀNH CHO STUDENT (Hidden)
-                null
+                <div className="mt-6">
+                    <h2 className="text-2xl font-semibold mb-4 text-green-700">Enrolled Courses ({user.enrolledCourses?.length || 0})</h2>
+                    <div className="space-y-3">
+                        {user.enrolledCourses && user.enrolledCourses.length > 0 ? (
+                            user.enrolledCourses.map(course => (
+                                <div key={course._id} className="p-4 border rounded-lg bg-gray-50">
+                                    <p className="font-semibold text-gray-800">{course.courseTitle}</p>
+                                    <p className="text-sm text-gray-600">Purchased on course</p>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-gray-500">This student is not enrolled in any courses yet.</p>
+                        )}
+                    </div>
+
+                    <h2 className="text-2xl font-semibold mt-8 mb-4 text-teal-700">Enrolled Course Combo ({user.enrolledPathways?.length || 0})</h2>
+                    <div className="space-y-3">
+                        {user.enrolledPathways && user.enrolledPathways.length > 0 ? (
+                            user.enrolledPathways.map(pathway => (
+                                <div key={pathway._id} className="p-4 border rounded-lg bg-teal-50 border-teal-100">
+                                    <p className="font-semibold text-gray-800">{pathway.pathwayTitle}</p>
+                                    <p className="text-sm text-gray-600">Purchased on pathway</p>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-gray-500">This student is not enrolled in any course combos yet.</p>
+                        )}
+                    </div>
+                </div>
             )}
 
             {/* 💡 MODAL XÁC NHẬN HẠ CẤP */}

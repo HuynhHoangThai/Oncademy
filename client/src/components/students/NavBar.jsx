@@ -14,8 +14,8 @@ const NavBar = () => {
   const applicationStatus = user?.publicMetadata?.applicationStatus || 'none';
   const isEducatorRole = user?.publicMetadata?.role === 'educator';
 
-  const { favoriteCourses } = useContext(AppContext);
-  const favoriteCount = favoriteCourses?.length || 0;
+  const { favoriteCourses, favoritePathways } = useContext(AppContext);
+  const favoriteCount = (favoriteCourses?.length || 0) + (favoritePathways?.length || 0);
 
   const handleEducatorClick = () => {
     if (isEducatorRole) {
@@ -28,7 +28,7 @@ const NavBar = () => {
   };
 
   return (
-    <div className={`flex items-center justify-between px-4 sm:px-10 md:px-14 lg:px-36 border-b border-gray-500 py-4 ${isCourseListPage ? 'bg-white' : 'bg-cyan-100/70'}`}>
+    <div className={`flex items-center justify-between px-4 sm:px-10 md:px-14 lg:px-36 border-b border-gray-500 py-4 bg-cyan-100/70`}>
       <Link to="/">
         <img src={assets.logo} alt="Logo" className="w-12 lg:w-14 cursor-pointer" />
       </Link>

@@ -52,9 +52,8 @@ const CourseList = () => {
 
   const filteredPathways = useMemo(() => {
     if (!allPathways) return [];
-    if (!debouncedSearch) return []; // Only show pathways if searching, or remove this check if you want all
-    // Since this is a "CourseList" page, maybe only show Combos if they match search?
-    // Previously logic was: return matchesSearch && matchesPrice.
+    if (!debouncedSearch) return allPathways; // Show all if no search
+
     return allPathways.filter(pathway => {
       return pathway.pathwayTitle.toLowerCase().includes(debouncedSearch.toLowerCase());
     });
@@ -85,20 +84,17 @@ const CourseList = () => {
       </div>
 
 
-      <div className="mt-8">
+      <div className="mt-8 md:px-36 px-8">
         {isLoading ? (
           <CourseListSkeleton />
         ) : error ? (
           <div className="text-center py-8">
             <p className="text-red-500">Error loading courses: {error.message}</p>
           </div>
-        ) : filteredCourses.length > 0 ? (
+        ) : (filteredCourses.length > 0 || filteredPathways.length > 0) ? (
           <>
             <div className="mb-4 flex items-center justify-between">
-              <div className="text-sm text-gray-600">
-                Showing {filteredCourses.length} of {pagination?.total || 0} courses
-                {debouncedSearch && <span> for "{debouncedSearch}"</span>}
-              </div>
+
               {isFetching && <div className="text-sm text-gray-500">Loading...</div>}
             </div>
 
@@ -116,10 +112,13 @@ const CourseList = () => {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredCourses.map((course) => (
-                <CourseCard key={course._id} course={course} />
-              ))}
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Courses</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredCourses.map((course) => (
+                  <CourseCard key={course._id} course={course} />
+                ))}
+              </div>
             </div>
 
             {/* Pagination */}

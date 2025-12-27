@@ -388,7 +388,37 @@ export const userEnrolledPathways = async (req, res) => {
         if (!userData) {
             return res.json({ success: false, message: 'User Not Found' });
         }
-        res.json({ success: true, enrolledPathways: userData.enrolledPathways || [] });
+
+        // Get progress for all enrolled pathways
+        const pathwayIds = userData.enrolledPathways.map(p => p._id);
+        const progressData = await PathwayProgress.find({
+            userId,
+            pathwayId: { $in: pathwayIds }
+        });
+
+        // Create a map of progress
+        const progressMap = {};
+        progressData.forEach(p => {
+            progressMap[p.pathwayId.toString()] = {
+                progressPercentage: p.progressPercentage,
+                completed: p.completed,
+                lecturesCompleted: p.lectureCompleted.length,
+                lastAccessedLecture: p.lastAccessedLecture
+            };
+        });
+
+        // Attach progress to each pathway
+        const enrolledPathways = userData.enrolledPathways.map(pathway => ({
+            ...pathway.toObject(),
+            progress: progressMap[pathway._id.toString()] || {
+                progressPercentage: 0,
+                completed: false,
+                lecturesCompleted: 0,
+                lastAccessedLecture: null
+            }
+        }));
+
+        res.json({ success: true, enrolledPathways });
     } catch (error) {
         console.error('Get enrolled pathways error:', error);
         res.json({ success: false, message: error.message });

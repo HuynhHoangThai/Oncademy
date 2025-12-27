@@ -223,7 +223,11 @@ export const getUserDetails = async (req, res) => {
             })
             .populate({
                 path: 'enrolledCourses',
-                select: 'title published price'
+                select: 'courseTitle isPublished coursePrice' // Fixed selection from 'title published price'
+            })
+            .populate({
+                path: 'enrolledPathways',
+                select: 'pathwayTitle isPublished pathwayPrice'
             })
             .exec();
 
@@ -231,7 +235,17 @@ export const getUserDetails = async (req, res) => {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
 
-        return res.json({ success: true, user });
+        // Convert to plain object to add extra fields
+        const userData = user.toObject();
+
+        // If educator, fetch pathways they created (since User model doesn't have createdPathways array)
+        if (userData.role === 'educator') {
+            const createdPathways = await PathwayCourse.find({ educator: userId })
+                .select('pathwayTitle isPublished pathwayPrice');
+            userData.createdPathways = createdPathways;
+        }
+
+        return res.json({ success: true, user: userData });
 
     } catch (error) {
         console.error('Get User Details Error:', error);
@@ -632,6 +646,10 @@ export const toggleBanUser = async (req, res) => {
         if (user.role === 'educator') {
             if (isBanned) {
                 await Course.updateMany(
+                    { educator: userId },
+                    { isPublished: false }
+                );
+                await PathwayCourse.updateMany(
                     { educator: userId },
                     { isPublished: false }
                 );

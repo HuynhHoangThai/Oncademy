@@ -12,11 +12,11 @@ const SideBar = () => {
     { name: 'Add Course', path: '/educator/add-course', icon: assets.add_icon },
     { name: 'My Courses', path: '/educator/my-courses', icon: assets.my_course_icon },
     { name: 'Quizzes', path: '/educator/quizzes', icon: assets.lesson_icon },
-    
+
   ];
 
   return isEducator && (
-    <div className='md:w-64 w-16 border-r border-gray-500 py-2 flex flex-col h-full'>
+    <div className='md:w-64 w-16 border-r border-gray-500 py-2 flex flex-col h-full mb-6'>
       {menuItems.map((item) => (
         <NavLink
           to={item.path}

@@ -19,7 +19,7 @@ const StudentsEnrolled = () => {
       const { data } = await axios.get(`${backendUrl}/api/educator/enrolled-students`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      
+
       if (data.success) {
         setEnrolledStudents(data.enrolledStudents || [])
       }
@@ -36,7 +36,7 @@ const StudentsEnrolled = () => {
       const { data } = await axios.get(`${backendUrl}/api/educator/dashboard`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      
+
       if (data.success) {
         setDashboardData(data.dashboardData)
       }
@@ -76,7 +76,7 @@ const StudentsEnrolled = () => {
 
   useEffect(() => {
     loadAllData()
-    
+
     // Auto-refresh khi tab visible và mỗi 5 phút
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -85,13 +85,13 @@ const StudentsEnrolled = () => {
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    
+
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible') {
         loadAllData()
       }
     }, 5 * 60 * 1000) // 5 minutes
-    
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       clearInterval(interval)
@@ -115,11 +115,10 @@ const StudentsEnrolled = () => {
           <button
             onClick={syncData}
             disabled={syncing}
-            className={`px-6 py-2.5 rounded-lg font-medium transition-all w-full lg:w-auto ${
-              syncing 
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+            className={`px-6 py-2.5 rounded-lg font-medium transition-all w-full lg:w-auto ${syncing
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg'
-            }`}
+              }`}
           >
             {syncing ? (
               <span className="flex items-center justify-center gap-2">
@@ -164,9 +163,8 @@ const StudentsEnrolled = () => {
                 filteredStudents.map((item, index) => (
                   <tr
                     key={index}
-                    className={`border-b border-gray-100 transition-colors duration-150 ${
-                      index % 2 === 0 ? 'bg-gray-50' : 'bg-white'
-                    } hover:bg-blue-50`}
+                    className={`border-b border-gray-100 transition-colors duration-150 ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'
+                      } hover:bg-blue-50`}
                   >
                     <td className="px-4 py-3 text-center hidden sm:table-cell">
                       <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-semibold text-xs">
@@ -190,7 +188,12 @@ const StudentsEnrolled = () => {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="font-medium text-gray-700 line-clamp-2">{item.courseTitle || 'N/A'}</span>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-gray-700 line-clamp-2">{item.courseTitle || 'N/A'}</span>
+                        <span className={`text-[10px] w-fit px-1.5 py-0.5 rounded font-bold uppercase mt-1 ${item.isPathway ? 'bg-teal-100 text-teal-700 border border-teal-200' : 'bg-blue-100 text-blue-700 border border-blue-200'}`}>
+                          {item.isPathway ? 'Combo' : 'Course'}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-center hidden md:table-cell">
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-700">

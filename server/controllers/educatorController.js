@@ -1,5 +1,6 @@
 import { clerkClient } from '@clerk/express'
 import Course from '../models/Course.js'
+import PathwayCourse from '../models/PathwayCourse.js'
 import { Purchase } from '../models/Purchase.js'
 import User from '../models/User.js'
 import { v2 as cloudinary } from 'cloudinary'
@@ -263,15 +264,25 @@ export const debugPurchases = async (req, res) => {
         }
 
         const courses = await Course.find({ educator });
-        const courseIds = courses.map(c => c._id);
+        const pathways = await PathwayCourse.find({ educator });
 
-        const allPurchases = await Purchase.find({ courseId: { $in: courseIds } })
+        const courseIds = courses.map(c => c._id);
+        const pathwayIds = pathways.map(p => p._id);
+
+        const allPurchases = await Purchase.find({
+            $or: [
+                { courseId: { $in: courseIds } },
+                { pathwayId: { $in: pathwayIds } }
+            ]
+        })
             .populate('userId', 'name')
-            .populate('courseId', 'courseTitle educator');
+            .populate('courseId', 'courseTitle educator')
+            .populate('pathwayId', 'pathwayTitle educator');
 
         const purchaseStats = {
             educatorId: educator,
             totalCourses: courses.length,
+            totalPathways: pathways.length,
             total: allPurchases.length,
             byStatus: {
                 pending: allPurchases.filter(p => p.status === 'pending').length,
@@ -283,11 +294,17 @@ export const debugPurchases = async (req, res) => {
                 title: c.courseTitle,
                 educator: c.educator
             })),
+            pathways: pathways.map(p => ({
+                id: p._id,
+                title: p.pathwayTitle,
+                educator: p.educator
+            })),
             purchases: allPurchases.map(p => ({
                 id: p._id,
-                courseId: p.courseId?._id,
-                course: p.courseId?.courseTitle,
-                courseEducator: p.courseId?.educator,
+                courseId: p.courseId?._id || p.pathwayId?._id,
+                course: p.courseId?.courseTitle || p.pathwayId?.pathwayTitle,
+                isPathway: !!p.pathwayId,
+                courseEducator: p.courseId?.educator || p.pathwayId?.educator,
                 student: p.userId?.name,
                 studentId: p.userId?._id,
                 amount: p.amount,
@@ -310,28 +327,38 @@ export const getEnrolledStudentsData = async (req, res) => {
             return res.json({ success: false, message: 'Unauthorized - No userId' });
         }
 
-        // Fetch all courses created by the educator
+        // Fetch all courses and pathways created by the educator
         const courses = await Course.find({ educator });
+        const pathways = await PathwayCourse.find({ educator });
 
-        // Get the list of course IDs
+        // Get IDs
         const courseIds = courses.map(course => course._id);
+        const pathwayIds = pathways.map(p => p._id);
 
-        // Fetch purchases with user and course data
+        // Fetch purchases with user, course and pathway data
         const purchases = await Purchase.find({
-            courseId: { $in: courseIds },
+            $or: [
+                { courseId: { $in: courseIds } },
+                { pathwayId: { $in: pathwayIds } }
+            ],
             status: 'completed'
         })
             .populate('userId', 'name imageUrl email')
             .populate('courseId', 'courseTitle')
+            .populate('pathwayId', 'pathwayTitle')
             .sort({ createdAt: -1 }); // Sort by newest first
 
         // enrolled students data with amount
-        const enrolledStudents = purchases.map(purchase => ({
-            student: purchase.userId,
-            courseTitle: purchase.courseId?.courseTitle || 'Unknown Course',
-            amount: purchase.amount || 0,
-            purchaseDate: purchase.createdAt
-        }));
+        const enrolledStudents = purchases.map(purchase => {
+            const isCourse = !!purchase.courseId;
+            return {
+                student: purchase.userId,
+                courseTitle: isCourse ? purchase.courseId?.courseTitle : purchase.pathwayId?.pathwayTitle,
+                isPathway: !isCourse,
+                amount: purchase.amount || 0,
+                purchaseDate: purchase.createdAt
+            };
+        });
 
         res.json({
             success: true,

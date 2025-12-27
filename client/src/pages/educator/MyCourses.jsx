@@ -516,7 +516,7 @@ const MyCourses = () => {
                   <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
                   </svg>
-                  <span className="hidden sm:inline">Course Combos</span>
+                  <span className="hidden sm:inline">Course Combo</span>
 
                   <span>({pathways.length})</span>
                 </div>
@@ -896,19 +896,22 @@ const MyCourses = () => {
                     </div>
                   </div>
 
-                  {/* Progress Bar */}
+                  {/* Course Completion Progress Bar */}
                   <div className="mb-2">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-xs text-gray-600">Overall Progress</span>
-                      <span className="text-xs font-semibold text-gray-700">{student.avgScore.toFixed(0)}%</span>
+                      <span className="text-xs text-gray-600">Courses Completed</span>
+                      <span className="text-xs font-semibold text-gray-700">
+                        {student.coursesCompleted}/{student.coursesEnrolled}
+                      </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
-                        className={`h-2 rounded-full transition-all ${student.avgScore >= 80 ? 'bg-green-500' :
-                          student.avgScore >= 60 ? 'bg-blue-500' :
-                            student.avgScore >= 40 ? 'bg-yellow-500' : 'bg-red-500'
-                          }`}
-                        style={{ width: `${Math.min(student.avgScore, 100)}%` }}
+                        className="h-2 rounded-full transition-all bg-blue-600"
+                        style={{
+                          width: `${student.coursesEnrolled > 0
+                            ? Math.min((student.coursesCompleted / student.coursesEnrolled) * 100, 100)
+                            : 0}%`
+                        }}
                       />
                     </div>
                   </div>

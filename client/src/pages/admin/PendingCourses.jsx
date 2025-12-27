@@ -224,7 +224,7 @@ const PendingCourses = () => {
                             : 'text-gray-600 hover:bg-white'
                             }`}
                     >
-                        Individual Courses ({courses.length})
+                        Courses ({courses.length})
                     </button>
                     <button
                         onClick={() => setViewMode('combos')}
@@ -233,7 +233,7 @@ const PendingCourses = () => {
                             : 'text-gray-600 hover:bg-white'
                             }`}
                     >
-                        Course Combos ({pathways.length})
+                        Course Combo ({pathways.length})
                     </button>
                 </div>
             </div>

@@ -54,43 +54,67 @@ const MyQuizResults = () => {
       const term = searchTerm.toLowerCase();
       return (
         attempt.quizTitle?.toLowerCase().includes(term) ||
-        attempt.courseTitle?.toLowerCase().includes(term)
+        attempt.courseTitle?.toLowerCase().includes(term) ||
+        attempt.pathwayTitle?.toLowerCase().includes(term)
       );
     }
 
     return true;
   });
 
-  // Group attempts by course
+  // Group attempts by course or pathway
   const attemptsByCourse = filteredAttempts.reduce((acc, attempt) => {
-    const courseTitle = attempt.courseTitle || 'Unknown Course';
-    if (!acc[courseTitle]) {
-      acc[courseTitle] = [];
+    // Create a unique key for grouping
+    let groupKey;
+    let groupTitle;
+    let isPathway = attempt.sourceType === 'pathway';
+
+    if (isPathway && attempt.pathwayTitle) {
+      groupKey = `pathway_${attempt.pathwayTitle}`;
+      groupTitle = attempt.pathwayTitle;
+    } else {
+      groupKey = `course_${attempt.courseTitle || 'Unknown Course'}`;
+      groupTitle = attempt.courseTitle || 'Unknown Course';
     }
-    acc[courseTitle].push(attempt);
+
+    if (!acc[groupKey]) {
+      acc[groupKey] = {
+        title: groupTitle,
+        isPathway: isPathway,
+        attempts: []
+      };
+    }
+    acc[groupKey].attempts.push(attempt);
     return acc;
   }, {});
 
-  // Sort courses alphabetically or by average score
-  const sortedCourses = Object.keys(attemptsByCourse).sort((courseA, courseB) => {
+  // Sort courses/pathways alphabetically or by average score
+  const sortedCourses = Object.keys(attemptsByCourse).sort((keyA, keyB) => {
     if (sortBy === 'score') {
-      // Calculate average score for each course
-      const getAvgScore = (courseTitle) => {
-        const completedAttempts = attemptsByCourse[courseTitle].filter(
+      // Calculate average score for each group
+      const getAvgScore = (key) => {
+        const group = attemptsByCourse[key];
+        const completedAttempts = group.attempts.filter(
           a => (a.status === 'completed' || a.status === 'graded') && a.scoring
         );
         if (completedAttempts.length === 0) return 0;
         return completedAttempts.reduce((sum, a) => sum + (a.scoring?.scorePercentage || 0), 0) / completedAttempts.length;
       };
-      return getAvgScore(courseB) - getAvgScore(courseA); // Highest first
+      return getAvgScore(keyB) - getAvgScore(keyA); // Highest first
     } else {
-      return courseA.localeCompare(courseB); // Alphabetically
+      // Sort pathways first, then alphabetically
+      const groupA = attemptsByCourse[keyA];
+      const groupB = attemptsByCourse[keyB];
+      if (groupA.isPathway !== groupB.isPathway) {
+        return groupA.isPathway ? -1 : 1; // Pathways first
+      }
+      return groupA.title.localeCompare(groupB.title); // Then alphabetically
     }
   });
 
-  // Sort attempts within each course
-  sortedCourses.forEach(courseTitle => {
-    attemptsByCourse[courseTitle].sort((a, b) => {
+  // Sort attempts within each group
+  sortedCourses.forEach(key => {
+    attemptsByCourse[key].attempts.sort((a, b) => {
       if (sortBy === 'score') {
         // Sort by score (highest first)
         const scoreA = a.scoring?.scorePercentage || 0;
@@ -213,146 +237,162 @@ const MyQuizResults = () => {
           </div>
         ) : (
           <div className="space-y-8">
-            {/* Group by Course */}
-            {sortedCourses.map((courseTitle) => (
-              <div key={courseTitle} className="space-y-4">
-                {/* Course Header */}
-                <div className="flex items-center gap-3 pb-3 border-b-2 border-blue-200">
-                  <div className="bg-blue-600 text-white p-2 rounded-lg">
-                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                    </svg>
+            {/* Group by Course/Pathway */}
+            {sortedCourses.map((groupKey) => {
+              const group = attemptsByCourse[groupKey];
+              return (
+                <div key={groupKey} className="space-y-4">
+                  {/* Group Header */}
+                  <div className={`flex items-center gap-3 pb-3 border-b-2 ${group.isPathway ? 'border-purple-200' : 'border-blue-200'}`}>
+                    <div className={`${group.isPathway ? 'bg-purple-600' : 'bg-blue-600'} text-white p-2 rounded-lg`}>
+                      {group.isPathway ? (
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                      ) : (
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-xl font-bold text-gray-800">{group.title}</h2>
+                        {group.isPathway && (
+                          <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
+                            Combo
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        {group.attempts.length} quiz attempt{group.attempts.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">{group.isPathway ? 'Combo' : 'Course'} Average</p>
+                      <p className={`text-2xl font-bold ${group.isPathway ? 'text-purple-700' : 'text-blue-700'}`}>
+                        {(() => {
+                          const completedAttempts = group.attempts.filter(
+                            a => (a.status === 'completed' || a.status === 'graded') && a.scoring
+                          );
+                          if (completedAttempts.length === 0) return 'N/A';
+                          const avg = completedAttempts.reduce(
+                            (sum, a) => sum + (a.scoring?.scorePercentage || 0),
+                            0
+                          ) / completedAttempts.length;
+                          return `${avg.toFixed(1)}%`;
+                        })()}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h2 className="text-xl font-bold text-gray-800">{courseTitle}</h2>
-                    <p className="text-sm text-gray-600">
-                      {attemptsByCourse[courseTitle].length} quiz attempt{attemptsByCourse[courseTitle].length !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600">Course Average</p>
-                    <p className="text-2xl font-bold text-blue-700">
-                      {(() => {
-                        const completedAttempts = attemptsByCourse[courseTitle].filter(
-                          a => (a.status === 'completed' || a.status === 'graded') && a.scoring
-                        );
-                        if (completedAttempts.length === 0) return 'N/A';
-                        const avg = completedAttempts.reduce(
-                          (sum, a) => sum + (a.scoring?.scorePercentage || 0),
-                          0
-                        ) / completedAttempts.length;
-                        return `${avg.toFixed(1)}%`;
-                      })()}
-                    </p>
-                  </div>
-                </div>
 
-                {/* Quiz Attempts for this Course */}
-                <div className="space-y-3 pl-4">
-                  {attemptsByCourse[courseTitle].map((attempt) => (
-                    <div
-                      key={attempt._id}
-                      className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 hover:shadow-xl transition-shadow cursor-pointer"
-                      onClick={() => navigate(`/quiz/${attempt.quizId}/result/${attempt._id}`)}
-                    >
-                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                        {/* Left: Quiz Info */}
-                        <div className="flex-1">
-                          <div className="flex items-start gap-3 mb-2">
-                            <div className="bg-blue-100 p-2 rounded-lg">
-                              <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                              </svg>
+                  {/* Quiz Attempts for this Group */}
+                  <div className="space-y-3 pl-4">
+                    {group.attempts.map((attempt) => (
+                      <div
+                        key={attempt._id}
+                        className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 hover:shadow-xl transition-shadow cursor-pointer"
+                        onClick={() => navigate(`/quiz/${attempt.quizId}/result/${attempt._id}`)}
+                      >
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                          {/* Left: Quiz Info */}
+                          <div className="flex-1">
+                            <div className="flex items-start gap-3 mb-2">
+                              <div className="bg-blue-100 p-2 rounded-lg">
+                                <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                                </svg>
+                              </div>
+                              <div className="flex-1">
+                                <h3 className="text-lg font-bold text-gray-800 mb-1">
+                                  {attempt.quizTitle || 'Unknown Quiz'}
+                                </h3>
+                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                  <span>Attempt #{attempt.attemptNumber}</span>
+                                  <span className="text-gray-300">•</span>
+                                  <span>{new Date(attempt.submittedAt).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                  })}</span>
+                                  {attempt.timeSpent && (
+                                    <>
+                                      <span className="text-gray-300">•</span>
+                                      <span>{Math.floor(attempt.timeSpent / 60)}m {attempt.timeSpent % 60}s</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(attempt.status)}`}>
+                                {attempt.status}
+                              </span>
                             </div>
-                            <div className="flex-1">
-                              <h3 className="text-lg font-bold text-gray-800 mb-1">
-                                {attempt.quizTitle || 'Unknown Quiz'}
-                              </h3>
-                              <div className="flex items-center gap-2 text-sm text-gray-500">
-                                <span>Attempt #{attempt.attemptNumber}</span>
-                                <span className="text-gray-300">•</span>
-                                <span>{new Date(attempt.submittedAt).toLocaleDateString('en-US', {
-                                  month: 'short',
-                                  day: 'numeric',
-                                  year: 'numeric'
-                                })}</span>
-                                {attempt.timeSpent && (
-                                  <>
-                                    <span className="text-gray-300">•</span>
-                                    <span>{Math.floor(attempt.timeSpent / 60)}m {attempt.timeSpent % 60}s</span>
-                                  </>
+                          </div>
+
+                          {/* Right: Score Display */}
+                          {(attempt.status === 'completed' || attempt.status === 'graded') && attempt.scoring ? (
+                            <div className="flex items-center gap-6">
+                              {/* Score Percentage */}
+                              <div className="text-center">
+                                <p className="text-sm text-gray-600 mb-1">Score</p>
+                                <p className={`text-4xl font-bold ${getScoreColor(attempt.scoring.scorePercentage)}`}>
+                                  {attempt.scoring.scorePercentage.toFixed(1)}%
+                                </p>
+                              </div>
+
+                              {/* Points */}
+                              <div className="text-center">
+                                <p className="text-sm text-gray-600 mb-1">Points</p>
+                                <p className="text-2xl font-bold text-gray-700">
+                                  {attempt.scoring.pointsEarned}/{attempt.scoring.totalPoints}
+                                </p>
+                              </div>
+
+                              {/* Pass/Fail Badge */}
+                              <div className="text-center">
+                                {attempt.scoring.passed ? (
+                                  <div className="flex flex-col items-center">
+                                    <svg className="w-12 h-12 text-green-500 mb-1" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                    </svg>
+                                    <span className="text-sm font-semibold text-green-700">Passed</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col items-center">
+                                    <svg className="w-12 h-12 text-red-500 mb-1" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                    </svg>
+                                    <span className="text-sm font-semibold text-red-700">Failed</span>
+                                  </div>
                                 )}
                               </div>
                             </div>
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(attempt.status)}`}>
-                              {attempt.status}
-                            </span>
-                          </div>
+                          ) : attempt.status === 'pending' ? (
+                            <div className="text-center px-6 py-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                              <svg className="w-12 h-12 text-yellow-600 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <p className="text-sm font-semibold text-yellow-800">Awaiting Grading</p>
+                              <p className="text-xs text-yellow-600 mt-1">Essay questions being reviewed</p>
+                            </div>
+                          ) : null}
                         </div>
 
-                        {/* Right: Score Display */}
-                        {(attempt.status === 'completed' || attempt.status === 'graded') && attempt.scoring ? (
-                          <div className="flex items-center gap-6">
-                            {/* Score Percentage */}
-                            <div className="text-center">
-                              <p className="text-sm text-gray-600 mb-1">Score</p>
-                              <p className={`text-4xl font-bold ${getScoreColor(attempt.scoring.scorePercentage)}`}>
-                                {attempt.scoring.scorePercentage.toFixed(1)}%
-                              </p>
-                            </div>
-
-                            {/* Points */}
-                            <div className="text-center">
-                              <p className="text-sm text-gray-600 mb-1">Points</p>
-                              <p className="text-2xl font-bold text-gray-700">
-                                {attempt.scoring.pointsEarned}/{attempt.scoring.totalPoints}
-                              </p>
-                            </div>
-
-                            {/* Pass/Fail Badge */}
-                            <div className="text-center">
-                              {attempt.scoring.passed ? (
-                                <div className="flex flex-col items-center">
-                                  <svg className="w-12 h-12 text-green-500 mb-1" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                  </svg>
-                                  <span className="text-sm font-semibold text-green-700">Passed</span>
-                                </div>
-                              ) : (
-                                <div className="flex flex-col items-center">
-                                  <svg className="w-12 h-12 text-red-500 mb-1" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                  </svg>
-                                  <span className="text-sm font-semibold text-red-700">Failed</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ) : attempt.status === 'pending' ? (
-                          <div className="text-center px-6 py-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                            <svg className="w-12 h-12 text-yellow-600 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        {/* View Details Link */}
+                        <div className="mt-4 pt-4 border-t border-gray-200 flex justify-end">
+                          <button className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm">
+                            View Details
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                             </svg>
-                            <p className="text-sm font-semibold text-yellow-800">Awaiting Grading</p>
-                            <p className="text-xs text-yellow-600 mt-1">Essay questions being reviewed</p>
-                          </div>
-                        ) : null}
+                          </button>
+                        </div>
                       </div>
-
-                      {/* View Details Link */}
-                      <div className="mt-4 pt-4 border-t border-gray-200 flex justify-end">
-                        <button className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm">
-                          View Details
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

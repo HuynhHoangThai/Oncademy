@@ -164,7 +164,7 @@ const AddCourse = () => {
       <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-8 flex flex-col gap-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-blue-700 mb-2">Create a New Course</h1>
-          <p className="text-gray-600 text-sm mb-4">Create individual courses or build comprehensive learning pathways</p>
+          <p className="text-gray-600 text-sm mb-4">Create courses or course combo</p>
 
           {/* Combo Option */}
           <div className="inline-flex items-center gap-3 p-3 bg-gradient-to-r from-teal-100 to-emerald-100 border-2 border-teal-300 rounded-lg">

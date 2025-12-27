@@ -4,7 +4,9 @@ import {
   createQuiz,
   uploadQuizFromExcel,
   getCourseQuizzes,
+  getPathwayQuizzes,
   getPublishedQuizzes,
+  getPublishedPathwayQuizzes,
   getQuizDetails,
   getQuizForTaking,
   submitQuizAttempt,
@@ -26,7 +28,7 @@ const quizRouter = express.Router();
 
 // Configure multer for Excel upload (memory storage)
 const storage = multer.memoryStorage();
-const upload = multer({ 
+const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
     const allowedTypes = [
@@ -52,6 +54,8 @@ quizRouter.get('/stats/student-attempts', protectEducator, getStudentQuizAttempt
 quizRouter.get('/my-attempts', protectRoute, getMyAttempts); // Get my quiz attempts (student)
 quizRouter.get('/course/:courseId', protectEducator, getCourseQuizzes);
 quizRouter.get('/course/:courseId/published', getPublishedQuizzes); // For students
+quizRouter.get('/pathway/:pathwayId', protectEducator, getPathwayQuizzes);
+quizRouter.get('/pathway/:pathwayId/published', getPublishedPathwayQuizzes); // For students
 quizRouter.get('/:quizId/take', getQuizForTaking); // For students to take quiz
 quizRouter.post('/:quizId/submit', submitQuizAttempt); // Submit quiz attempt
 quizRouter.get('/attempt/:attemptId', getQuizAttempt); // Get quiz attempt result

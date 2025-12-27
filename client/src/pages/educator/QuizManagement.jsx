@@ -11,10 +11,13 @@ const QuizManagement = () => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
   const [courses, setCourses] = useState([]);
+  const [pathways, setPathways] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
+  const [selectedPathway, setSelectedPathway] = useState(null);
+  const [selectionType, setSelectionType] = useState('course'); // 'course' or 'pathway'
   const [uploadingExcel, setUploadingExcel] = useState(false);
   const [expandedCourses, setExpandedCourses] = useState(new Set());
   const [viewMode, setViewMode] = useState('grouped'); // 'grouped' or 'list'
@@ -48,7 +51,8 @@ const QuizManagement = () => {
               const quizzesWithCourse = quizData.quizzes.map(quiz => ({
                 ...quiz,
                 courseId: course._id,
-                courseName: course.courseTitle
+                courseName: course.courseTitle,
+                sourceType: 'course'
               }));
               allQuizzes.push(...quizzesWithCourse);
             }
@@ -57,6 +61,36 @@ const QuizManagement = () => {
           }
         }
         setQuizzes(allQuizzes);
+      }
+
+      // Fetch educator's pathways
+      const { data: pathwaysData } = await axios.get(`${backendUrl}/api/pathway/educator/pathways`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (pathwaysData.success) {
+        setPathways(pathwaysData.pathways || []);
+
+        // Fetch all quizzes for all pathways
+        for (const pathway of pathwaysData.pathways || []) {
+          try {
+            const { data: quizData } = await axios.get(`${backendUrl}/api/quiz/pathway/${pathway._id}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (quizData.success) {
+              // Add pathway info to each quiz
+              const quizzesWithPathway = quizData.quizzes.map(quiz => ({
+                ...quiz,
+                pathwayId: pathway._id,
+                pathwayName: pathway.pathwayTitle,
+                sourceType: 'pathway'
+              }));
+              setQuizzes(prev => [...prev, ...quizzesWithPathway]);
+            }
+          } catch (error) {
+            console.error(`Error fetching quizzes for pathway ${pathway._id}:`, error);
+          }
+        }
       }
     } catch (error) {
       console.error('Fetch error:', error);
@@ -67,19 +101,33 @@ const QuizManagement = () => {
   };
 
   const handleCreateManual = () => {
-    if (!selectedCourse) {
-      toast.error('Please select a course first');
-      return;
+    if (selectionType === 'course') {
+      if (!selectedCourse) {
+        toast.error('Please select a course first');
+        return;
+      }
+      navigate(`/educator/quiz/create/${selectedCourse}?type=course`);
+    } else {
+      if (!selectedPathway) {
+        toast.error('Please select a pathway first');
+        return;
+      }
+      navigate(`/educator/quiz/create/${selectedPathway}?type=pathway`);
     }
-    navigate(`/educator/quiz/create/${selectedCourse}`);
   };
 
   const handleUploadExcel = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (!selectedCourse) {
+    if (selectionType === 'course' && !selectedCourse) {
       toast.error('Please select a course first');
+      e.target.value = '';
+      return;
+    }
+
+    if (selectionType === 'pathway' && !selectedPathway) {
+      toast.error('Please select a pathway first');
       e.target.value = '';
       return;
     }
@@ -89,7 +137,12 @@ const QuizManagement = () => {
       const token = await getToken();
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('courseId', selectedCourse);
+
+      if (selectionType === 'course') {
+        formData.append('courseId', selectedCourse);
+      } else {
+        formData.append('pathwayId', selectedPathway);
+      }
 
       const { data } = await axios.post(
         `${backendUrl}/api/quiz/upload-excel`,
@@ -106,6 +159,7 @@ const QuizManagement = () => {
         toast.success(data.message);
         setShowCreateModal(false);
         setSelectedCourse(null);
+        setSelectedPathway(null);
         fetchCoursesAndQuizzes();
       } else {
         toast.error(data.message);
@@ -135,19 +189,36 @@ const QuizManagement = () => {
     });
   };
 
-  const expandAll = () => {
-    setExpandedCourses(new Set(courses.map(c => c._id)));
-  };
-
   const collapseAll = () => {
     setExpandedCourses(new Set());
+  };
+
+  const expandAll = () => {
+    const allIds = [
+      ...courses.map(c => c._id),
+      ...pathways.map(p => `pathway_${p._id}`)
+    ];
+    setExpandedCourses(new Set(allIds));
   };
 
   // Group quizzes by course
   const groupedQuizzes = courses.map(course => ({
     ...course,
-    quizzes: quizzes.filter(quiz => quiz.courseId === course._id)
+    quizzes: quizzes.filter(quiz => quiz.courseId === course._id),
+    type: 'course'
   }));
+
+  // Group quizzes by pathway
+  const groupedPathways = pathways.map(pathway => ({
+    ...pathway,
+    title: pathway.pathwayTitle,
+    thumbnail: pathway.pathwayThumbnail,
+    quizzes: quizzes.filter(quiz => quiz.pathwayId === pathway._id),
+    type: 'pathway'
+  }));
+
+  // Combined list for display
+  const allGroupedItems = [...groupedQuizzes, ...groupedPathways];
 
   const handleDeleteQuiz = async (quizId) => {
     if (!window.confirm('Are you sure you want to delete this quiz?')) return;
@@ -228,8 +299,8 @@ const QuizManagement = () => {
                 <button
                   onClick={() => setViewMode('grouped')}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${viewMode === 'grouped'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-800'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
                     }`}
                 >
                   <div className="flex items-center gap-2">
@@ -242,8 +313,8 @@ const QuizManagement = () => {
                 <button
                   onClick={() => setViewMode('list')}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${viewMode === 'list'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-800'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
                     }`}
                 >
                   <div className="flex items-center gap-2">
@@ -291,36 +362,51 @@ const QuizManagement = () => {
             </button>
           </div>
         ) : viewMode === 'grouped' ? (
-          /* Grouped by Course View */
+          /* Grouped by Course/Pathway View */
           <div className="space-y-4">
-            {groupedQuizzes.map((course) => {
-              const isExpanded = expandedCourses.has(course._id);
-              const courseQuizzes = course.quizzes;
+            {allGroupedItems.map((item) => {
+              const itemId = item.type === 'pathway' ? `pathway_${item._id}` : item._id;
+              const isExpanded = expandedCourses.has(itemId);
+              const itemQuizzes = item.quizzes;
+              const itemTitle = item.type === 'pathway' ? item.pathwayTitle : item.courseTitle;
+              const itemThumbnail = item.type === 'pathway' ? item.pathwayThumbnail : item.courseThumbnail;
 
               return (
-                <div key={course._id} className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-                  {/* Course Header */}
+                <div key={itemId} className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                  {/* Item Header */}
                   <button
-                    onClick={() => toggleCourse(course._id)}
-                    className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-blue-50 to-white hover:from-blue-100 hover:to-blue-50 transition-all"
+                    onClick={() => toggleCourse(itemId)}
+                    className={`w-full px-6 py-4 flex items-center justify-between ${item.type === 'pathway'
+                      ? 'bg-gradient-to-r from-purple-50 to-white hover:from-purple-100 hover:to-purple-50'
+                      : 'bg-gradient-to-r from-blue-50 to-white hover:from-blue-100 hover:to-blue-50'
+                      } transition-all`}
                   >
                     <div className="flex items-center gap-4">
                       <img
-                        src={course.courseThumbnail}
-                        alt={course.courseTitle}
-                        className="w-16 h-16 rounded-lg object-cover border-2 border-blue-200"
+                        src={itemThumbnail}
+                        alt={itemTitle}
+                        className={`w-16 h-16 rounded-lg object-cover border-2 ${item.type === 'pathway' ? 'border-purple-200' : 'border-blue-200'
+                          }`}
                       />
                       <div className="text-left">
-                        <h3 className="text-lg font-bold text-gray-800">{course.courseTitle}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-bold text-gray-800">{itemTitle}</h3>
+                          {item.type === 'pathway' && (
+                            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
+                              Combo
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm text-gray-600 mt-1">
-                          {courseQuizzes.length} quiz{courseQuizzes.length !== 1 ? 'zes' : ''} •
-                          {courseQuizzes.filter(q => q.isPublished).length} published
+                          {itemQuizzes.length} quiz{itemQuizzes.length !== 1 ? 'zes' : ''} •
+                          {itemQuizzes.filter(q => q.isPublished).length} published
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                        {courseQuizzes.length}
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${item.type === 'pathway' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                        }`}>
+                        {itemQuizzes.length}
                       </span>
                       <svg
                         className={`w-5 h-5 text-gray-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
@@ -333,18 +419,25 @@ const QuizManagement = () => {
                     </div>
                   </button>
 
-                  {/* Quiz List for Course */}
+                  {/* Quiz List */}
                   {isExpanded && (
                     <div className="border-t border-gray-200">
-                      {courseQuizzes.length === 0 ? (
+                      {itemQuizzes.length === 0 ? (
                         <div className="px-6 py-8 text-center">
-                          <p className="text-gray-500 text-sm">No quizzes in this course yet</p>
+                          <p className="text-gray-500 text-sm">No quizzes in this {item.type === 'pathway' ? 'combo' : 'course'} yet</p>
                           <button
                             onClick={() => {
-                              setSelectedCourse(course._id);
+                              if (item.type === 'pathway') {
+                                setSelectionType('pathway');
+                                setSelectedPathway(item._id);
+                              } else {
+                                setSelectionType('course');
+                                setSelectedCourse(item._id);
+                              }
                               setShowCreateModal(true);
                             }}
-                            className="mt-3 text-blue-600 hover:text-blue-700 text-sm font-medium"
+                            className={`mt-3 text-sm font-medium ${item.type === 'pathway' ? 'text-purple-600 hover:text-purple-700' : 'text-blue-600 hover:text-blue-700'
+                              }`}
                           >
                             + Add Quiz
                           </button>
@@ -363,8 +456,8 @@ const QuizManagement = () => {
                               </tr>
                             </thead>
                             <tbody>
-                              {courseQuizzes.map((quiz, idx) => (
-                                <tr key={quiz._id} className={`${idx !== courseQuizzes.length - 1 ? 'border-b border-gray-100' : ''} hover:bg-blue-50 transition`}>
+                              {itemQuizzes.map((quiz, idx) => (
+                                <tr key={quiz._id} className={`${idx !== itemQuizzes.length - 1 ? 'border-b border-gray-100' : ''} hover:bg-blue-50 transition`}>
                                   <td className="px-6 py-4">
                                     <div>
                                       <p className="font-semibold text-gray-800">{quiz.quizTitle}</p>
@@ -375,8 +468,8 @@ const QuizManagement = () => {
                                   </td>
                                   <td className="px-4 py-4 text-center hidden md:table-cell">
                                     <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${quiz.quizType === 'final-exam' ? 'bg-red-100 text-red-700' :
-                                        quiz.quizType === 'assignment' ? 'bg-yellow-100 text-yellow-700' :
-                                          'bg-green-100 text-green-700'
+                                      quiz.quizType === 'assignment' ? 'bg-yellow-100 text-yellow-700' :
+                                        'bg-green-100 text-green-700'
                                       }`}>
                                       {quiz.quizType}
                                     </span>
@@ -391,8 +484,8 @@ const QuizManagement = () => {
                                     <button
                                       onClick={() => handleTogglePublish(quiz._id)}
                                       className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold transition-colors ${quiz.isPublished
-                                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                         }`}
                                     >
                                       {quiz.isPublished ? 'Published' : 'Draft'}
@@ -471,8 +564,8 @@ const QuizManagement = () => {
                       </td>
                       <td className="px-4 py-3 text-center hidden md:table-cell">
                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${quiz.quizType === 'final-exam' ? 'bg-red-100 text-red-700' :
-                            quiz.quizType === 'assignment' ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-green-100 text-green-700'
+                          quiz.quizType === 'assignment' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-green-100 text-green-700'
                           }`}>
                           {quiz.quizType}
                         </span>
@@ -487,8 +580,8 @@ const QuizManagement = () => {
                         <button
                           onClick={() => handleTogglePublish(quiz._id)}
                           className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold transition-colors ${quiz.isPublished
-                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                             }`}
                         >
                           {quiz.isPublished ? 'Published' : 'Draft'}
@@ -552,31 +645,81 @@ const QuizManagement = () => {
                 </button>
               </div>
 
-              {/* Course Selection */}
+              {/* Type Selection Toggle */}
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Quiz For <span className="text-red-500">*</span>
+                </label>
+                <div className="flex bg-gray-100 rounded-lg p-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectionType('course');
+                      setSelectedPathway(null);
+                    }}
+                    className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${selectionType === 'course'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-800'
+                      }`}
+                  >
+                    Course
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectionType('pathway');
+                      setSelectedCourse(null);
+                    }}
+                    className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${selectionType === 'pathway'
+                      ? 'bg-white text-purple-600 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-800'
+                      }`}
+                  >
+                    Combo/Pathway
+                  </button>
+                </div>
+              </div>
+
+              {/* Course/Pathway Selection */}
               <div className="mb-6">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Select Course <span className="text-red-500">*</span>
+                  Select {selectionType === 'course' ? 'Course' : 'Combo/Pathway'} <span className="text-red-500">*</span>
                 </label>
-                <select
-                  value={selectedCourse || ''}
-                  onChange={(e) => setSelectedCourse(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                >
-                  <option value="">-- Choose a course --</option>
-                  {courses.map((course) => (
-                    <option key={course._id} value={course._id}>
-                      {course.courseTitle}
-                    </option>
-                  ))}
-                </select>
+                {selectionType === 'course' ? (
+                  <select
+                    value={selectedCourse || ''}
+                    onChange={(e) => setSelectedCourse(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  >
+                    <option value="">-- Choose a course --</option>
+                    {courses.map((course) => (
+                      <option key={course._id} value={course._id}>
+                        {course.courseTitle}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <select
+                    value={selectedPathway || ''}
+                    onChange={(e) => setSelectedPathway(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                  >
+                    <option value="">-- Choose a combo/pathway --</option>
+                    {pathways.map((pathway) => (
+                      <option key={pathway._id} value={pathway._id}>
+                        {pathway.pathwayTitle}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                 {/* Manual Builder */}
                 <button
                   onClick={handleCreateManual}
-                  disabled={!selectedCourse}
-                  className={`group relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl p-6 transition-all duration-300 transform hover:scale-105 shadow-lg ${!selectedCourse ? 'opacity-50 cursor-not-allowed' : ''
+                  disabled={selectionType === 'course' ? !selectedCourse : !selectedPathway}
+                  className={`group relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl p-6 transition-all duration-300 transform hover:scale-105 shadow-lg ${(selectionType === 'course' ? !selectedCourse : !selectedPathway) ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                 >
                   <div className="flex flex-col items-center gap-4">
@@ -593,9 +736,9 @@ const QuizManagement = () => {
                 </button>
 
                 {/* Excel Upload */}
-                <div className={`group relative overflow-hidden bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl p-6 transition-all duration-300 shadow-lg ${!selectedCourse ? 'opacity-50 cursor-not-allowed' : ''
+                <div className={`group relative overflow-hidden bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl p-6 transition-all duration-300 shadow-lg ${(selectionType === 'course' ? !selectedCourse : !selectedPathway) ? 'opacity-50 cursor-not-allowed' : ''
                   }`}>
-                  <label className={`flex flex-col items-center gap-4 h-full ${selectedCourse ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
+                  <label className={`flex flex-col items-center gap-4 h-full ${(selectionType === 'course' ? selectedCourse : selectedPathway) ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
                     <div className="p-4 bg-white bg-opacity-20 rounded-full">
                       <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -610,7 +753,7 @@ const QuizManagement = () => {
                       accept=".xlsx,.xls"
                       onChange={handleUploadExcel}
                       className="hidden"
-                      disabled={uploadingExcel || !selectedCourse}
+                      disabled={uploadingExcel || (selectionType === 'course' ? !selectedCourse : !selectedPathway)}
                     />
                   </label>
                   {uploadingExcel && (

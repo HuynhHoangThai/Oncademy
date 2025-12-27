@@ -26,7 +26,7 @@ const CoursesSection = () => {
       {pathways.length > 0 && (
         <div className="mt-10">
           <div className="flex items-center gap-3 mb-6">
-            <h3 className="text-2xl font-semibold text-gray-800">Featured Course Combos</h3>
+            <h3 className="text-2xl font-semibold text-gray-800">Course Combo</h3>
             <span className="bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-xs px-2 py-1 rounded-full font-bold">NEW</span>
           </div>
 
@@ -43,8 +43,8 @@ const CoursesSection = () => {
       )}
 
       {/* Individual Courses Section */}
-      <div className="mt-12">
-        <h3 className="text-2xl font-semibold text-gray-800 mb-6"> Courses</h3>
+      <div className="mt-12 mb-6">
+        <h3 className="text-2xl font-semibold text-gray-800 mb-6 "> Courses</h3>
         {isLoading ? (
           <CourseListSkeleton count={4} />
         ) : (

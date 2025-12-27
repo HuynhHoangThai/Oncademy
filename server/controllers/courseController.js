@@ -1,4 +1,5 @@
 import Course from "../models/Course.js";
+import User from "../models/User.js";
 import { Purchase } from "../models/Purchase.js";
 import Quiz from "../models/Quiz.js";
 import QuizAttempt from "../models/QuizAttempt.js";
@@ -69,7 +70,7 @@ export const getCourseId = async (req, res) => {
     try {
 
         const courseData = await Course.findById(id)
-            .populate({ path: 'educator'})
+            .populate({ path: 'educator' })
 
         // Remove lectureUrl if isPreviewFree is false
         courseData.courseContent.forEach(chapter => {
@@ -96,7 +97,7 @@ export const deleteCourse = async (req, res) => {
     try {
         // Find course and verify ownership
         const course = await Course.findById(id)
-        
+
         if (!course) {
             return res.json({ success: false, message: 'Course not found' })
         }
@@ -147,10 +148,10 @@ export const updateCourse = async (req, res) => {
 
     try {
         const { courseData } = req.body
-        
+
         // Find course and verify ownership
         const course = await Course.findById(id)
-        
+
         if (!course) {
             return res.json({ success: false, message: 'Course not found' })
         }
@@ -166,7 +167,7 @@ export const updateCourse = async (req, res) => {
         if (course.approvalStatus === 'rejected') {
             parsedCourseData.approvalStatus = 'pending';
             parsedCourseData.isPublished = false;
-            parsedCourseData.rejectionReason = ''; 
+            parsedCourseData.rejectionReason = '';
         }
 
         // Upload new thumbnail if provided
@@ -182,7 +183,7 @@ export const updateCourse = async (req, res) => {
             // Upload new thumbnail
             const b64 = Buffer.from(imageFile.buffer).toString('base64')
             const dataURI = `data:${imageFile.mimetype};base64,${b64}`
-            
+
             const imageUpload = await cloudinary.uploader.upload(dataURI, {
                 resource_type: 'auto'
             })
@@ -209,4 +210,3 @@ export const updateCourse = async (req, res) => {
         res.json({ success: false, message: error.message })
     }
 }
- 

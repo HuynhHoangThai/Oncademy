@@ -4,7 +4,12 @@ const quizSchema = new mongoose.Schema({
   courseId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Course',
-    required: true
+    default: null
+  },
+  pathwayId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'PathwayCourse',
+    default: null
   },
   chapterId: {
     type: String,
@@ -14,7 +19,7 @@ const quizSchema = new mongoose.Schema({
     type: String,
     default: null
   },
-  
+
   quizTitle: {
     type: String,
     required: true
@@ -28,7 +33,7 @@ const quizSchema = new mongoose.Schema({
     enum: ['quiz', 'assignment', 'final-exam'],
     default: 'quiz'
   },
-  
+
   // Timing & Access
   duration: {
     type: Number, // minutes
@@ -50,7 +55,7 @@ const quizSchema = new mongoose.Schema({
     type: Number, // percentage
     default: 0
   },
-  
+
   // Attempt Settings
   maxAttempts: {
     type: Number,
@@ -60,7 +65,7 @@ const quizSchema = new mongoose.Schema({
     type: Number, // percentage
     default: 70
   },
-  
+
   // Questions
   questions: [{
     questionId: {
@@ -85,20 +90,20 @@ const quizSchema = new mongoose.Schema({
       required: true,
       default: 1
     },
-    
+
     // For Multiple Choice & True/False
     options: [{
       optionId: String,
       optionText: String,
       isCorrect: Boolean
     }],
-    
+
     // For True/False
     correctAnswer: {
       type: Boolean,
       default: null
     },
-    
+
     // For Essay
     maxWords: {
       type: Number,
@@ -108,7 +113,7 @@ const quizSchema = new mongoose.Schema({
       type: String,
       default: ''
     },
-    
+
     // For Fill in the Blank
     correctAnswers: [{
       type: String
@@ -117,14 +122,14 @@ const quizSchema = new mongoose.Schema({
       type: Boolean,
       default: false
     },
-    
+
     // Explanation
     explanation: {
       type: String,
       default: ''
     }
   }],
-  
+
   // Settings
   shuffleQuestions: {
     type: Boolean,
@@ -142,7 +147,7 @@ const quizSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  
+
   // Metadata
   totalPoints: {
     type: Number,
@@ -162,7 +167,7 @@ const quizSchema = new mongoose.Schema({
 });
 
 // Calculate total points before saving
-quizSchema.pre('save', function(next) {
+quizSchema.pre('save', function (next) {
   if (this.questions && this.questions.length > 0) {
     this.totalPoints = this.questions.reduce((sum, q) => sum + q.points, 0);
   }
@@ -171,6 +176,7 @@ quizSchema.pre('save', function(next) {
 
 // Add indexes for better query performance
 quizSchema.index({ courseId: 1, isPublished: 1 });
+quizSchema.index({ pathwayId: 1, isPublished: 1 });
 quizSchema.index({ createdBy: 1 });
 quizSchema.index({ courseId: 1, chapterId: 1 });
 quizSchema.index({ courseId: 1, lectureId: 1 });

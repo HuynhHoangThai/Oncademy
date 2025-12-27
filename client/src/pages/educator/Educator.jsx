@@ -38,12 +38,12 @@ const Educator = () => {
                     <div
                         className="fixed bg-gray-50/90 overflow-y-auto"
                         style={{
-                            top: `${NAVBAR_HEIGHT}px`,
-                            height: `calc(100vh - ${NAVBAR_HEIGHT}px)`,
-                            width: '250px' 
+                            top: `${NAVBAR_HEIGHT + 16}px`,
+                            height: `calc(100vh - ${NAVBAR_HEIGHT + 16}px)`,
+                            width: '250px'
                         }}
                     >
-                        <SideBar className="h-full" />
+                        <SideBar className="h-full mb-6" />
                     </div>
                 </div>
                 <div className='flex-1 min-w-0'>

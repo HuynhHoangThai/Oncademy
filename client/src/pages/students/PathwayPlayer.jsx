@@ -21,18 +21,34 @@ const PathwayPlayer = () => {
         userData,
         addPathwayRating,
         toggleFavoritePathway,
-        isPathwayFavorite
+        isPathwayFavorite,
+        enrolledPathways
     } = useContext(AppContext);
 
     const [pathway, setPathway] = useState(null);
     const [loading, setLoading] = useState(true);
     const [playerData, setPlayerData] = useState(null);
+    const [quizzes, setQuizzes] = useState([]);
+    const [quizzesExpanded, setQuizzesExpanded] = useState(false);
 
     // Manage expanded states
     const [expandedPhases, setExpandedPhases] = useState(new Set([0]));
     const [expandedChapters, setExpandedChapters] = useState(new Set());
     const [completedLectures, setCompletedLectures] = useState(new Set());
     const [isMarkingComplete, setIsMarkingComplete] = useState(false);
+
+    // Fetch Quizzes for Pathway
+    const fetchQuizzes = async () => {
+        try {
+            const { data } = await axios.get(`${backendUrl}/api/quiz/pathway/${id}/published`);
+            if (data.success) {
+                setQuizzes(data.quizzes || []);
+            }
+        } catch (error) {
+            console.error('Fetch quizzes error:', error);
+            setQuizzes([]);
+        }
+    };
 
     // Fetch Progress
     const fetchProgress = async () => {
@@ -54,6 +70,7 @@ const PathwayPlayer = () => {
     useEffect(() => {
         if (pathway) { // Only fetch progress after pathway is loaded or if we have ID. actually ID is enough.
             fetchProgress();
+            fetchQuizzes();
         }
     }, [id, getToken, pathway]); // Added pathway dependency to ensure we fetch after initial load if needed, but ID is stable.
 
@@ -355,8 +372,66 @@ const PathwayPlayer = () => {
                                 ))}
                             </div>
 
+                            {/* Quizzes Section */}
+                            {quizzes.length > 0 && (
+                                <div className="border border-purple-300 bg-purple-50 mb-2 rounded mt-4">
+                                    <div
+                                        className="flex items-center justify-between px-4 py-3 cursor-pointer select-none"
+                                        onClick={() => setQuizzesExpanded(!quizzesExpanded)}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <img
+                                                className={`transform transition-transform ${quizzesExpanded ? "rotate-180" : ""}`}
+                                                src={assets.down_arrow_icon}
+                                                alt="arrow icon"
+                                            />
+                                            <p className="font-medium md:text-base text-sm text-purple-700">Quizzes & Assignments</p>
+                                        </div>
+                                        <p className="text-sm md:text-default text-purple-600">{quizzes.length} quiz{quizzes.length !== 1 ? 'zes' : ''}</p>
+                                    </div>
+                                    <div className={`overflow-hidden transition-all duration-300 ${quizzesExpanded ? "max-h-96 overflow-y-auto" : "max-h-0"}`}>
+                                        <ul className="md:pl-10 pl-4 pr-4 py-2 border-t border-purple-200">
+                                            {quizzes.map((quiz) => (
+                                                <li key={quiz._id} className="flex items-start gap-2 py-2 border-b border-purple-100 last:border-b-0">
+                                                    <svg className="w-5 h-5 mt-0.5 text-purple-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                    </svg>
+                                                    <div className="flex-1">
+                                                        <div className="flex items-start justify-between gap-2">
+                                                            <div className="flex-1">
+                                                                <p className="font-medium text-gray-800 text-sm md:text-base">{quiz.quizTitle}</p>
+                                                                {quiz.quizDescription && quiz.quizDescription.trim() && (
+                                                                    <p className="text-xs text-gray-600 mt-1">{quiz.quizDescription}</p>
+                                                                )}
+                                                                <div className="flex flex-wrap gap-2 mt-2">
+                                                                    <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded">
+                                                                        {quiz.questions?.length || 0} questions
+                                                                    </span>
+                                                                    <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                                                                        {quiz.duration} min
+                                                                    </span>
+                                                                    <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">
+                                                                        Pass: {quiz.passingScore}%
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => navigate(`/quiz/${quiz._id}`)}
+                                                                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+                                                            >
+                                                                Take Quiz
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex items-center gap-4 py-4 mt-10 bg-gray-50 p-4 rounded-lg">
-                                <h1 className="lg:text-xl md:text-lg text-base font-bold text-gray-800">Rate this pathway:</h1>
+                                <h1 className="lg:text-xl md:text-lg text-base font-bold text-gray-800">Rate this course:</h1>
                                 <Rating
                                     initialRating={pathway?.courseRatings?.find(r => r.userId === userId)?.rating || 0}
                                     onRate={handleRating}

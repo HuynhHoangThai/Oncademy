@@ -28,7 +28,12 @@ const UserListTemplate = ({ role }) => {
         try {
             const response = await api.get(endpoint);
 
-            setUsers(response.users || []);
+            // Deduplicate users by email to prevent display issues
+            const uniqueUsers = response.users?.filter((user, index, self) =>
+                index === self.findIndex((u) => u.email === user.email)
+            ) || [];
+
+            setUsers(uniqueUsers);
             setTotalPages(response.totalPages || 0);
             setCurrentPage(response.currentPage || 1);
         } catch (error) {
@@ -53,7 +58,7 @@ const UserListTemplate = ({ role }) => {
     const handleItemsPerPageChange = (event) => {
         const newLimit = parseInt(event.target.value);
         setItemsPerPage(newLimit);
-        setCurrentPage(1); 
+        setCurrentPage(1);
     };
 
     const openModal = (action, userId, userName) => {
@@ -78,7 +83,7 @@ const UserListTemplate = ({ role }) => {
             try {
                 await api.post('/api/admin/demote-educator', { userIdToDemote: userId });
                 toast.success(`${userName} has been successfully demoted to Student.`);
-                fetchUsers(); 
+                fetchUsers();
             } catch (error) {
                 console.error('Demote error:', error);
                 toast.error(`Error demoting ${userName}. Check server logs.`);

@@ -1,6 +1,9 @@
 import Quiz from '../models/Quiz.js';
 import QuizAttempt from '../models/QuizAttempt.js';
 import Course from '../models/Course.js';
+import PathwayCourse from '../models/PathwayCourse.js';
+import { CourseProgress } from '../models/CourseProgress.js';
+import { Purchase } from '../models/Purchase.js';
 import * as XLSX from 'xlsx';
 import { getUserId } from '../utils/authHelper.js';
 
@@ -20,25 +23,34 @@ function shuffleArray(array) {
 // Create quiz manually
 const createQuiz = async (req, res) => {
   try {
-    const { courseId, chapterId, lectureId, questions, maxAttempts, deadline, ...quizSettings } = req.body;
+    const { courseId, pathwayId, chapterId, lectureId, questions, maxAttempts, deadline, ...quizSettings } = req.body;
     const educatorId = req.userId || getUserId(req);
 
     if (!educatorId) {
       return res.json({ success: false, message: 'User ID not found' });
     }
 
-    if (!courseId) {
-      return res.json({ success: false, message: 'Course ID is required' });
+    if (!courseId && !pathwayId) {
+      return res.json({ success: false, message: 'Course ID or Pathway ID is required' });
     }
 
-    // Verify course ownership
-    const course = await Course.findById(courseId);
-    if (!course) {
-      return res.json({ success: false, message: 'Course not found' });
-    }
-
-    if (course.educator.toString() !== educatorId) {
-      return res.json({ success: false, message: 'Unauthorized - not your course' });
+    // Verify ownership
+    if (courseId) {
+      const course = await Course.findById(courseId);
+      if (!course) {
+        return res.json({ success: false, message: 'Course not found' });
+      }
+      if (course.educator.toString() !== educatorId) {
+        return res.json({ success: false, message: 'Unauthorized - not your course' });
+      }
+    } else if (pathwayId) {
+      const pathway = await PathwayCourse.findById(pathwayId);
+      if (!pathway) {
+        return res.json({ success: false, message: 'Pathway not found' });
+      }
+      if (pathway.educator.toString() !== educatorId) {
+        return res.json({ success: false, message: 'Unauthorized - not your pathway' });
+      }
     }
 
     // Transform questions to match schema
@@ -92,7 +104,8 @@ const createQuiz = async (req, res) => {
       shuffleOptions: quizSettings.shuffleOptions || false,
       showCorrectAnswers: quizSettings.showCorrectAnswers !== false,
       showScoreImmediately: quizSettings.showScoreImmediately !== false,
-      courseId,
+      courseId: courseId || null,
+      pathwayId: pathwayId || null,
       chapterId: chapterId || null,
       lectureId: lectureId || null,
       questions: transformedQuestions,
@@ -115,17 +128,28 @@ const createQuiz = async (req, res) => {
 // Upload quiz from Excel
 const uploadQuizFromExcel = async (req, res) => {
   try {
-    const { courseId, chapterId, lectureId } = req.body;
+    const { courseId, pathwayId, chapterId, lectureId } = req.body;
     const educatorId = req.userId;
 
     if (!req.file) {
       return res.json({ success: false, message: 'No file uploaded' });
     }
 
-    // Verify course ownership
-    const course = await Course.findById(courseId);
-    if (!course || course.educator !== educatorId) {
-      return res.json({ success: false, message: 'Unauthorized' });
+    if (!courseId && !pathwayId) {
+      return res.json({ success: false, message: 'Course ID or Pathway ID is required' });
+    }
+
+    // Verify ownership
+    if (courseId) {
+      const course = await Course.findById(courseId);
+      if (!course || course.educator !== educatorId) {
+        return res.json({ success: false, message: 'Unauthorized' });
+      }
+    } else if (pathwayId) {
+      const pathway = await PathwayCourse.findById(pathwayId);
+      if (!pathway || pathway.educator.toString() !== educatorId) {
+        return res.json({ success: false, message: 'Unauthorized' });
+      }
     }
 
     // Read Excel file
@@ -256,7 +280,8 @@ const uploadQuizFromExcel = async (req, res) => {
 
     // Create quiz
     const quiz = new Quiz({
-      courseId,
+      courseId: courseId || null,
+      pathwayId: pathwayId || null,
       chapterId,
       lectureId,
       quizTitle,
@@ -279,6 +304,30 @@ const uploadQuizFromExcel = async (req, res) => {
     });
   } catch (error) {
     console.error('Upload quiz error:', error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// Get all quizzes for a pathway
+const getPathwayQuizzes = async (req, res) => {
+  try {
+    const { pathwayId } = req.params;
+    const educatorId = req.userId;
+
+    // Verify pathway ownership
+    const pathway = await PathwayCourse.findById(pathwayId);
+    if (!pathway || pathway.educator.toString() !== educatorId) {
+      return res.json({ success: false, message: 'Unauthorized' });
+    }
+
+    const quizzes = await Quiz.find({ pathwayId }).sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      quizzes
+    });
+  } catch (error) {
+    console.error('Get pathway quizzes error:', error);
     res.json({ success: false, message: error.message });
   }
 };
@@ -325,6 +374,28 @@ const getPublishedQuizzes = async (req, res) => {
     });
   } catch (error) {
     console.error('Get published quizzes error:', error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// Get published quizzes for students (Pathway)
+const getPublishedPathwayQuizzes = async (req, res) => {
+  try {
+    const { pathwayId } = req.params;
+
+    const quizzes = await Quiz.find({
+      pathwayId,
+      isPublished: true
+    })
+      .select('-questions.correctAnswer -questions.correctAnswers -questions.options.isCorrect') // Hide answers
+      .sort({ createdAt: 1 });
+
+    res.json({
+      success: true,
+      quizzes
+    });
+  } catch (error) {
+    console.error('Get published pathway quizzes error:', error);
     res.json({ success: false, message: error.message });
   }
 };
@@ -1132,8 +1203,10 @@ const getStudentQuizAttempts = async (req, res) => {
       return student;
     });
 
-    // Fetch student information from Clerk
+    // Fetch student information from Clerk and Course Progress
     const { clerkClient } = await import('@clerk/express');
+    const educatorCourses = await Course.find({ educator: educatorId }).select('_id');
+    const educatorCourseIds = educatorCourses.map(c => c._id);
 
     for (const student of studentAttempts) {
       try {
@@ -1141,11 +1214,30 @@ const getStudentQuizAttempts = async (req, res) => {
         student.studentName = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown';
         student.studentEmail = user.emailAddresses?.[0]?.emailAddress || 'N/A';
         student.studentImage = user.imageUrl || '';
+
+        // Calculate Course Completion
+        const coursesEnrolled = await Purchase.countDocuments({
+          userId: student.studentId,
+          courseId: { $in: educatorCourseIds },
+          status: 'completed'
+        });
+
+        const coursesCompleted = await CourseProgress.countDocuments({
+          userId: student.studentId,
+          courseId: { $in: educatorCourseIds },
+          completed: true
+        });
+
+        student.coursesEnrolled = coursesEnrolled;
+        student.coursesCompleted = coursesCompleted;
+
       } catch (error) {
-        console.error(`Error fetching user ${student.studentId}:`, error);
+        console.error(`Error fetching data for student ${student.studentId}:`, error);
         student.studentName = 'Unknown Student';
         student.studentEmail = 'N/A';
         student.studentImage = '';
+        student.coursesEnrolled = 0;
+        student.coursesCompleted = 0;
       }
     }
 
@@ -1176,11 +1268,17 @@ const getMyAttempts = async (req, res) => {
     const attempts = await QuizAttempt.find({ studentId: userId })
       .populate({
         path: 'quizId',
-        select: 'quizTitle courseId',
-        populate: {
-          path: 'courseId',
-          select: 'courseTitle'
-        }
+        select: 'quizTitle courseId pathwayId',
+        populate: [
+          {
+            path: 'courseId',
+            select: 'courseTitle'
+          },
+          {
+            path: 'pathwayId',
+            select: 'pathwayTitle'
+          }
+        ]
       })
       .populate({
         path: 'courseId',
@@ -1192,21 +1290,40 @@ const getMyAttempts = async (req, res) => {
     const transformedAttempts = [];
 
     for (const attempt of attempts) {
-      let courseTitle = 'Unknown Course';
+      let courseTitle = null;
+      let pathwayTitle = null;
+      let sourceType = 'course';
       let quizTitle = attempt.quizId?.quizTitle || 'Unknown Quiz';
 
-      // Try to get courseId from Quiz or QuizAttempt
-      let courseIdValue = attempt.quizId?.courseId || attempt.courseId;
+      // Try to get courseId and pathwayId from Quiz
+      const quizCourseId = attempt.quizId?.courseId;
+      const quizPathwayId = attempt.quizId?.pathwayId;
 
-      // If courseId exists
-      if (courseIdValue) {
-        // Check if already populated (has courseTitle property)
-        if (courseIdValue.courseTitle) {
-          courseTitle = courseIdValue.courseTitle;
+      // Check if quiz belongs to a pathway
+      if (quizPathwayId) {
+        sourceType = 'pathway';
+        if (quizPathwayId.pathwayTitle) {
+          pathwayTitle = quizPathwayId.pathwayTitle;
         } else {
-          // courseId is ObjectId, need to manually fetch
+          // pathwayId is ObjectId, need to manually fetch
           try {
-            const course = await Course.findById(courseIdValue);
+            const pathway = await PathwayCourse.findById(quizPathwayId);
+            if (pathway) {
+              pathwayTitle = pathway.pathwayTitle;
+            }
+          } catch (err) {
+            console.error('Error fetching pathway:', err.message);
+          }
+        }
+      }
+
+      // Check if quiz belongs to a course
+      if (quizCourseId) {
+        if (quizCourseId.courseTitle) {
+          courseTitle = quizCourseId.courseTitle;
+        } else {
+          try {
+            const course = await Course.findById(quizCourseId);
             if (course) {
               courseTitle = course.courseTitle;
             }
@@ -1214,19 +1331,20 @@ const getMyAttempts = async (req, res) => {
             console.error('Error fetching course:', err.message);
           }
         }
-      } else {
-        // Last resort: try to get from raw quiz
-        if (attempt.quizId?._id) {
+      }
+
+      // Fallback to attempt's courseId
+      if (!courseTitle && !pathwayTitle && attempt.courseId) {
+        if (attempt.courseId.courseTitle) {
+          courseTitle = attempt.courseId.courseTitle;
+        } else {
           try {
-            const quiz = await Quiz.findById(attempt.quizId._id).lean();
-            if (quiz?.courseId) {
-              const course = await Course.findById(quiz.courseId);
-              if (course) {
-                courseTitle = course.courseTitle;
-              }
+            const course = await Course.findById(attempt.courseId);
+            if (course) {
+              courseTitle = course.courseTitle;
             }
           } catch (err) {
-            console.error('Error in fallback fetch:', err.message);
+            console.error('Error fetching course from attempt:', err.message);
           }
         }
       }
@@ -1235,7 +1353,9 @@ const getMyAttempts = async (req, res) => {
         _id: attempt._id,
         quizId: attempt.quizId?._id,
         quizTitle: quizTitle,
-        courseTitle: courseTitle,
+        courseTitle: courseTitle || (sourceType === 'course' ? 'Unknown Course' : null),
+        pathwayTitle: pathwayTitle,
+        sourceType: sourceType,
         status: attempt.status,
         submittedAt: attempt.submittedAt,
         attemptNumber: attempt.attemptNumber,
@@ -1261,7 +1381,9 @@ export {
   createQuiz,
   uploadQuizFromExcel,
   getCourseQuizzes,
+  getPathwayQuizzes,
   getPublishedQuizzes,
+  getPublishedPathwayQuizzes,
   getQuizForTaking,
   submitQuizAttempt,
   getQuizAttempt,

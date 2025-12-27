@@ -311,8 +311,14 @@ export const deletePathway = async (req, res) => {
 
         // Update purchases status
         await Purchase.updateMany(
-            { courseId: id, courseType: 'pathway' },
-            { $set: { status: 'refunded' } }
+            { pathwayId: id },
+            { $set: { status: 'failed' } } // Refunded might be better but status enum is 'failed' for now or just failed
+        );
+
+        // Remove from user favorites
+        await User.updateMany(
+            { favoritePathways: id },
+            { $pull: { favoritePathways: id } }
         );
 
         // Delete pathway

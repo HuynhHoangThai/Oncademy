@@ -6,7 +6,39 @@ import axios from "axios";
 import { toast } from "react-toastify";
 
 
-const AppContext = createContext()
+const AppContext = createContext({
+    allCourses: [],
+    allPathways: [],
+    enrolledCourses: [],
+    enrolledPathways: [],
+    favoriteCourses: [],
+    favoritePathways: [],
+    courseRatings: {},
+    viewHistory: [],
+    userData: null,
+    isEducator: false,
+    backendUrl: '',
+    currency: '',
+    getToken: async () => null,
+    caculateRating: () => 0,
+    calculateRating: () => 0,
+    addCourseRating: () => { },
+    getUserRatingForCourse: () => 0,
+    getTotalReviewCount: () => 0,
+    toggleFavoriteCourse: () => { },
+    isCourseFavorite: () => false,
+    getFavoriteCourses: () => [],
+    getUserRatingsKey: () => '',
+    addToViewHistory: () => { },
+    getViewHistory: () => [],
+    clearViewHistory: () => { },
+    addPathwayRating: () => { },
+    toggleFavoritePathway: () => { },
+    isPathwayFavorite: () => false,
+    calculateChapterTime: () => '',
+    calculateCourseDuration: () => '',
+    calculateNoOfLectures: () => 0
+})
 
 const AppProvider = (props) => {
     const { user } = useUser(); // Get current user from Clerk
@@ -389,18 +421,19 @@ const AppProvider = (props) => {
     const isPathwayFavorite = (pathwayId) => favoritePathways.includes(pathwayId);
 
     // View history functions
-    const addToViewHistory = (courseId) => {
-        if (!courseId) return;
+    const addToViewHistory = (id, isPathway = false) => {
+        if (!id) return;
 
         const key = user ? `viewHistory_${user.id}` : 'viewHistory_guest';
         let updated = [...viewHistory];
 
-        // Remove if already exists to move to front
-        updated = updated.filter(item => item.courseId !== courseId);
+        // Remove if already exists (check both id and isPathway) to move to front
+        updated = updated.filter(item => item.id !== id || item.isPathway !== isPathway);
 
-        // Add to front with timestamp
+        // Add to front with timestamp and flag
         updated.unshift({
-            courseId,
+            id,
+            isPathway,
             timestamp: new Date().toISOString(),
             viewDate: new Date().toLocaleDateString()
         });
@@ -421,6 +454,7 @@ const AppProvider = (props) => {
     };
 
     const value = {
+        getToken,
         currency,
         backendUrl,
         allCourses,
