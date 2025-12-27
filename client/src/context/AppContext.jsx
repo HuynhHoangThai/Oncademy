@@ -1,4 +1,4 @@
-import {createContext,useEffect,useState} from "react";
+import { createContext, useEffect, useState } from "react";
 
 import humanizeDuration from "humanize-duration";
 import { useAuth, useUser } from '@clerk/clerk-react';
@@ -9,21 +9,23 @@ import { toast } from "react-toastify";
 const AppContext = createContext()
 
 const AppProvider = (props) => {
-    const {user} = useUser(); // Get current user from Clerk
+    const { user } = useUser(); // Get current user from Clerk
     const currency = import.meta.env.VITE_CURRENCY
     const [allCourses, setAllCourses] = useState([])
+    const [allPathways, setAllPathways] = useState([])
     const [isEducator, setIsEducator] = useState(false)
     const [enrolledCourses, setEnrolledCourses] = useState([])
+    const [enrolledPathways, setEnrolledPathways] = useState([])
     const [userData, setUserData] = useState(null)
-    const {getToken}=useAuth();
-    const backendUrl=import.meta.env.VITE_BACKEND_URL;
-    
+    const { getToken } = useAuth();
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
     // Use user-specific localStorage key
     const getUserRatingsKey = () => user ? `courseRatings_${user.id}` : 'courseRatings_guest';
-    
+
     const [courseRatings, setCourseRatings] = useState({})
     const [ratingUpdateTrigger, setRatingUpdateTrigger] = useState(0)
-   
+
     const fetchUserData = async () => {
 
         try {
@@ -48,9 +50,9 @@ const AppProvider = (props) => {
         }
 
     }
-    
+
     const fetchAllCourses = async () => {
-         try {
+        try {
 
             const { data } = await axios.get(backendUrl + '/api/course/all');
 
@@ -64,20 +66,32 @@ const AppProvider = (props) => {
             toast.error(error.message)
         }
     }
-    const caculateRating =(course) => {
-        if(course.courseRating.length === 0) {
+
+    const fetchAllPathways = async () => {
+        try {
+            // Fetch with large limit or specific 'all' param if backend supports, otherwise default
+            const { data } = await axios.get(backendUrl + '/api/pathway/all?input=&page=1&limit=100');
+            if (data.success) {
+                setAllPathways(data.pathways)
+            }
+        } catch (error) {
+            console.error(error)
+        }
+    }
+    const caculateRating = (course) => {
+        if (course.courseRating.length === 0) {
             return 0;
         }
         let totalRating = 0
-        course.courseRating.forEach(rating=> {  
+        course.courseRating.forEach(rating => {
             totalRating += rating.rating
         })
         return Math.floor(totalRating / course.courseRating.length);
     }
-    const calculateChapterTime= (chapter)=> {
-        let time=0
-        chapter.chapterContent.map((lecture)=> time+=lecture.lectureDuration )
-        return humanizeDuration(time *60 * 1000, { unit:["h","m"] });
+    const calculateChapterTime = (chapter) => {
+        let time = 0
+        chapter.chapterContent.map((lecture) => time += lecture.lectureDuration)
+        return humanizeDuration(time * 60 * 1000, { unit: ["h", "m"] });
     }
     const calculateCourseDuration = (course) => {
         let time = 0;
@@ -121,6 +135,25 @@ const AppProvider = (props) => {
             setEnrolledCourses([])
         }
     }
+    const fetchUserEnrolledPathways = async () => {
+        try {
+            if (!user) return setEnrolledPathways([])
+            const token = await getToken()
+            const { data } = await axios.get(backendUrl + '/api/user/enrolled-pathways', {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            if (data.success) {
+                setEnrolledPathways(Array.isArray(data.enrolledPathways) ? data.enrolledPathways : [])
+            } else {
+                toast.error(data.message)
+                setEnrolledPathways([])
+            }
+        } catch (error) {
+            console.error('fetchUserEnrolledPathways error', error)
+            toast.error(error.message)
+            setEnrolledPathways([])
+        }
+    }
 
     // Rating functions
     const addCourseRating = (courseId, rating, review = '') => {
@@ -142,6 +175,21 @@ const AppProvider = (props) => {
         const key = 'courseRatings_all';
         localStorage.setItem(key, JSON.stringify(newRatings));
         setRatingUpdateTrigger(prev => prev + 1);
+    }
+
+    const addPathwayRating = async (pathwayId, rating) => {
+        try {
+            const token = await getToken()
+            const { data } = await axios.post(`${backendUrl}/api/user/rate-pathway`, { pathwayId, rating }, { headers: { Authorization: `Bearer ${token}` } })
+            if (data.success) {
+                toast.success('Rating updated')
+                // Ideally refresh pathway specific data but we can just let component handle optimistics or refresh
+            } else {
+                toast.error(data.message)
+            }
+        } catch (error) {
+            toast.error(error.message)
+        }
     }
 
     const getUserRatingForCourse = (courseId) => {
@@ -178,17 +226,20 @@ const AppProvider = (props) => {
     }
     useEffect(() => {
         fetchAllCourses()
-       
+        fetchAllPathways()
+
     }, [])
     useEffect(() => {
         if (user) {
             fetchUserData()
             fetchUserEnrolledCourses()
+            fetchUserEnrolledPathways()
         } else {
             // Reset educator flag when no user
             setIsEducator(false)
             setUserData(null)
             setEnrolledCourses([])
+            setEnrolledPathways([])
         }
     }, [user])
     // Load ratings when user is ready or changes
@@ -200,7 +251,7 @@ const AppProvider = (props) => {
         setCourseRatings(loadedRatings);
         setRatingUpdateTrigger(prev => prev + 1);
     }, [user]);
-    
+
     // Favorite courses logic
     const getFavoriteKey = () => user ? `favoriteCourses_${user.id}` : 'favoriteCourses_guest';
     const [favoriteCourses, setFavoriteCourses] = useState([]);
@@ -217,13 +268,19 @@ const AppProvider = (props) => {
             });
             if (data.success) {
                 setFavoriteCourses(data.favorites || []);
+                setFavoritePathways(data.favoritePathways || []);
                 localStorage.setItem(getFavoriteKey(), JSON.stringify(data.favorites || []));
+                localStorage.setItem(getFavoritePathwayKey(), JSON.stringify(data.favoritePathways || []));
             }
         } catch (error) {
             console.error("Failed to fetch DB favorites:", error);
             const key = getFavoriteKey();
             const saved = localStorage.getItem(key);
             setFavoriteCourses(saved ? JSON.parse(saved) : []);
+
+            const pathwayKey = getFavoritePathwayKey();
+            const savedPathways = localStorage.getItem(pathwayKey);
+            setFavoritePathways(savedPathways ? JSON.parse(savedPathways) : []);
         }
     };
 
@@ -291,26 +348,66 @@ const AppProvider = (props) => {
 
     const getFavoriteCourses = () => favoriteCourses;
 
+    const getFavoritePathwayKey = () => user ? `favoritePathways_${user.id}` : 'favoritePathways_guest';
+    const [favoritePathways, setFavoritePathways] = useState([]);
+
+    const toggleFavoritePathway = async (pathwayId) => {
+        if (!user) {
+            let updated;
+            if (favoritePathways.includes(pathwayId)) {
+                updated = favoritePathways.filter(id => id !== pathwayId);
+            } else {
+                updated = [...favoritePathways, pathwayId];
+            }
+            setFavoritePathways(updated);
+            localStorage.setItem(getFavoritePathwayKey(), JSON.stringify(updated));
+            toast.success(favoritePathways.includes(pathwayId) ? "Removed from favorites (Local)." : "Added to favorites (Local).");
+            return;
+        }
+
+        try {
+            const token = await getToken();
+            const response = await axios.post(
+                `${backendUrl}/api/user/toggle-favorite-pathway`,
+                { pathwayId },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.success) {
+                setFavoritePathways(response.data.favoritePathways);
+                toast.success(response.data.message);
+                localStorage.setItem(getFavoritePathwayKey(), JSON.stringify(response.data.favoritePathways));
+            } else {
+                toast.error(response.data.message);
+            }
+        } catch (error) {
+            console.error("Failed to toggle pathway favorites:", error);
+            toast.error('Failed to update status on server.');
+        }
+    };
+
+    const isPathwayFavorite = (pathwayId) => favoritePathways.includes(pathwayId);
+
     // View history functions
     const addToViewHistory = (courseId) => {
         if (!courseId) return;
-        
+
         const key = user ? `viewHistory_${user.id}` : 'viewHistory_guest';
         let updated = [...viewHistory];
-        
+
         // Remove if already exists to move to front
         updated = updated.filter(item => item.courseId !== courseId);
-        
+
         // Add to front with timestamp
         updated.unshift({
             courseId,
             timestamp: new Date().toISOString(),
             viewDate: new Date().toLocaleDateString()
         });
-        
+
         // Keep only last 50 items
         updated = updated.slice(0, 50);
-        
+
         setViewHistory(updated);
         localStorage.setItem(key, JSON.stringify(updated));
     };
@@ -326,16 +423,19 @@ const AppProvider = (props) => {
     const value = {
         currency,
         backendUrl,
-        allCourses, 
+        allCourses,
+        allPathways,
         caculateRating,
         calculateRating,
-        isEducator, 
+        isEducator,
         setIsEducator,
         calculateChapterTime,
         calculateCourseDuration,
         calculateNoOfLectures,
         enrolledCourses,
         setEnrolledCourses,
+        enrolledPathways,
+        setEnrolledPathways,
         addCourseRating,
         getUserRatingForCourse,
         courseRatings,
@@ -351,7 +451,11 @@ const AppProvider = (props) => {
         getViewHistory,
         clearViewHistory,
         userData,
-        setUserData
+        setUserData,
+        addPathwayRating,
+        favoritePathways,
+        toggleFavoritePathway,
+        isPathwayFavorite
     };
     return (
         <AppContext.Provider value={value}>

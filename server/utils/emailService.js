@@ -405,3 +405,140 @@ export const sendEducatorRejectionEmail = async ({ userEmail, userName }) => {
     return { success: false, error: error.message };
   }
 };
+
+/**
+ * Send pathway enrollment confirmation email
+ * @param {Object} params - Email parameters
+ * @param {string} params.userEmail - Recipient email address
+ * @param {string} params.userName - User's name
+ * @param {string} params.pathwayTitle - Title of the enrolled pathway
+ * @param {string} params.pathwayId - Pathway ID for generating link
+ * @returns {Promise<Object>} Email sending result with success status and messageId
+ */
+export const sendPathwayEnrollmentEmail = async ({ userEmail, userName, pathwayTitle, pathwayId }) => {
+  try {
+    const transporter = getTransporter();
+
+    // Skip sending if transporter is not configured
+    if (!transporter) {
+      return { success: false, error: 'Email credentials not configured' };
+    }
+
+    // Validate required parameters from database
+    if (!userEmail || !userName || !pathwayTitle || !pathwayId) {
+      throw new Error('Missing required parameters: userEmail, userName, pathwayTitle, or pathwayId');
+    }
+
+    // Validate FRONTEND_URL is configured
+    if (!process.env.FRONTEND_URL) {
+      throw new Error('FRONTEND_URL environment variable is not set');
+    }
+
+    const pathwayUrl = `${process.env.FRONTEND_URL}/pathway-player/${pathwayId}`;
+
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Đăng ký Combo khóa học thành công</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
+          <table role="presentation" style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td align="center" style="padding: 40px 0;">
+                <table role="presentation" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
+                  
+                  <!-- Header -->
+                  <tr>
+                    <td style="background-color: #0d9488; padding: 40px 30px; text-align: center; border-bottom: 4px solid #0f766e;">
+                      <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">
+                        ✓ Đăng ký Combo thành công
+                      </h1>
+                    </td>
+                  </tr>
+                  
+                  <!-- Content -->
+                  <tr>
+                    <td style="padding: 40px 30px;">
+                      <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
+                        Xin chào <strong>${userName}</strong>,
+                      </p>
+                      
+                      <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
+                        Bạn đã đăng ký thành công Combo khóa học:
+                      </p>
+                      
+                      <div style="background-color: #f0fdfa; border-left: 4px solid #0d9488; padding: 20px; margin: 20px 0; border-radius: 4px;">
+                        <h2 style="margin: 0; color: #0d9488; font-size: 20px; font-weight: 600;">
+                          ${pathwayTitle}
+                        </h2>
+                      </div>
+                      
+                      <p style="margin: 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">
+                        Thanh toán của bạn đã được xác nhận thành công. Bạn có thể truy cập toàn bộ lộ trình học tập ngay bây giờ!
+                      </p>
+                      
+                      <!-- CTA Button -->
+                      <table role="presentation" style="margin: 30px 0;">
+                        <tr>
+                          <td align="center">
+                            <a href="${pathwayUrl}" style="display: inline-block; padding: 14px 40px; background-color: #0d9488; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 6px;">
+                              → Bắt đầu học ngay
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <p style="margin: 20px 0 0; color: #666666; font-size: 14px; line-height: 1.6;">
+                        Chúc bạn học tập hiệu quả!
+                      </p>
+                    </td>
+                  </tr>
+                  
+                  <!-- Footer -->
+                  <tr>
+                    <td style="background-color: #f8f9fa; padding: 30px; text-align: center; border-top: 1px solid #e9ecef;">
+                      <p style="margin: 0 0 10px; color: #999999; font-size: 14px;">
+                        © ${new Date().getFullYear()} Oncademy. All rights reserved.
+                      </p>
+                      <p style="margin: 0; color: #999999; font-size: 12px;">
+                        Email này được gửi tự động, vui lòng không trả lời.
+                      </p>
+                    </td>
+                  </tr>
+                  
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+      </html>
+    `;
+
+    // Validate required env variables
+    if (!process.env.EMAIL_FROM) {
+      throw new Error('EMAIL_FROM environment variable is not set');
+    }
+
+    const recipientEmail = getRecipientEmail(userEmail);
+    console.log('📧 [PATHWAY ENROLLMENT] Sending email to:', recipientEmail, '(original:', userEmail, ')');
+
+    // Send email with Nodemailer
+    const info = await transporter.sendMail({
+      from: process.env.EMAIL_FROM,
+      to: recipientEmail,
+      subject: `✅ Đăng ký thành công Combo: ${pathwayTitle}`,
+      html: emailHtml,
+    });
+
+    console.log('✅ [PATHWAY ENROLLMENT] Email sent successfully! MessageId:', info.messageId);
+
+    return { success: true, data: { messageId: info.messageId } };
+
+  } catch (error) {
+    console.error('❌ Error in sendPathwayEnrollmentEmail:', error);
+    return { success: false, error: error.message };
+  }
+};

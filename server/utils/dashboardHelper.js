@@ -1,5 +1,7 @@
+
 import Dashboard from '../models/Dashboard.js';
 import Course from '../models/Course.js';
+import PathwayCourse from '../models/PathwayCourse.js';
 import { Purchase } from '../models/Purchase.js';
 import User from '../models/User.js';
 
@@ -13,19 +15,29 @@ export const syncEducatorDashboard = async (educatorId) => {
         const courses = await Course.find({ educator: educatorId })
             .select('courseTitle courseThumbnail coursePrice enrolledStudents createdAt')
             .lean();
-        
-        const totalCourses = courses.length;
-        const courseIds = courses.map(course => course._id);
 
-        // 2. Inherit data from Purchase table
+        // 1b. Inherit data from PathwayCourse table
+        const pathways = await PathwayCourse.find({ educator: educatorId })
+            .select('pathwayTitle pathwayThumbnail pathwayPrice enrolledStudents createdAt')
+            .lean();
+
+        const totalCourses = courses.length + pathways.length;
+        const courseIds = courses.map(course => course._id);
+        const pathwayIds = pathways.map(pathway => pathway._id);
+
+        // 2. Inherit data from Purchase table (Courses + Pathways)
         const purchases = await Purchase.find({
-            courseId: { $in: courseIds },
+            $or: [
+                { courseId: { $in: courseIds } },
+                { pathwayId: { $in: pathwayIds } }
+            ],
             status: 'completed'
         })
-        .populate('userId', 'name imageUrl email')
-        .populate('courseId', 'courseTitle courseThumbnail')
-        .sort({ createdAt: -1 })
-        .lean();
+            .populate('userId', 'name imageUrl email')
+            .populate('courseId', 'courseTitle courseThumbnail')
+            .populate('pathwayId', 'pathwayTitle pathwayThumbnail')
+            .sort({ createdAt: -1 })
+            .lean();
 
         // 3. Calculate total earnings from Purchase
         const totalEarnings = purchases.reduce((sum, purchase) => {
@@ -41,7 +53,7 @@ export const syncEducatorDashboard = async (educatorId) => {
                 uniqueStudentIdsFromPurchases.add(purchase.userId._id.toString());
             }
         });
-        
+
         // Also get from Course.enrolledStudents for students added via webhook
         const uniqueStudentIdsFromCourses = new Set();
         courses.forEach(course => {
@@ -51,13 +63,21 @@ export const syncEducatorDashboard = async (educatorId) => {
                 });
             }
         });
-        
+        // Also get from PathwayCourse.enrolledStudents
+        pathways.forEach(pathway => {
+            if (pathway.enrolledStudents && Array.isArray(pathway.enrolledStudents)) {
+                pathway.enrolledStudents.forEach(studentId => {
+                    uniqueStudentIdsFromCourses.add(studentId.toString());
+                });
+            }
+        });
+
         // Merge both sets to get all unique students
         const allUniqueStudentIds = new Set([
             ...uniqueStudentIdsFromPurchases,
             ...uniqueStudentIdsFromCourses
         ]);
-        
+
         const totalEnrollments = allUniqueStudentIds.size;
 
         // 5. Get detailed student info from User table
@@ -66,21 +86,38 @@ export const syncEducatorDashboard = async (educatorId) => {
         }).select('name imageUrl email createdAt').lean();
 
         // 6. Recent enrollments (from Purchase)
-        const recentEnrollments = purchases.slice(0, 50).map(purchase => ({
-            studentId: purchase.userId?._id,
-            studentName: purchase.userId?.name || 'Unknown',
-            studentEmail: purchase.userId?.email || '',
-            studentImage: purchase.userId?.imageUrl || '',
-            courseId: purchase.courseId?._id,
-            courseTitle: purchase.courseId?.courseTitle || 'Unknown Course',
-            courseThumbnail: purchase.courseId?.courseThumbnail || '',
-            amount: purchase.amount || 0,
-            enrolledAt: purchase.createdAt,
-            purchaseId: purchase._id
+        const recentEnrollments = purchases.slice(0, 50).map(purchase => {
+            // Determine if it's a course or pathway
+            const isCourse = !!purchase.courseId;
+            const itemTitle = isCourse ? purchase.courseId?.courseTitle : purchase.pathwayId?.pathwayTitle;
+            const itemThumbnail = isCourse ? purchase.courseId?.courseThumbnail : purchase.pathwayId?.pathwayThumbnail;
+
+            return {
+                studentId: purchase.userId?._id,
+                studentName: purchase.userId?.name || 'Unknown',
+                studentEmail: purchase.userId?.email || '',
+                studentImage: purchase.userId?.imageUrl || '',
+                courseId: purchase.courseId?._id || purchase.pathwayId?._id, // Use pathwayId as fallback, handled as "courseId" in schema
+                courseTitle: itemTitle || 'Unknown Item',
+                courseThumbnail: itemThumbnail || '',
+                amount: purchase.amount || 0,
+                enrolledAt: purchase.createdAt,
+                purchaseId: purchase._id
+            };
+        });
+
+        // 7. Course statistics (Include Pathways)
+        // Format pathways to match course structure
+        const pathwayStats = pathways.map(pathway => ({
+            courseId: pathway._id,
+            courseTitle: pathway.pathwayTitle,
+            courseThumbnail: pathway.pathwayThumbnail,
+            coursePrice: pathway.pathwayPrice,
+            enrolledCount: pathway.enrolledStudents ? pathway.enrolledStudents.length : 0,
+            createdAt: pathway.createdAt
         }));
 
-        // 7. Course statistics
-        const courseStats = courses.map(course => ({
+        const originalCourseStats = courses.map(course => ({
             courseId: course._id,
             courseTitle: course.courseTitle,
             courseThumbnail: course.courseThumbnail,
@@ -89,25 +126,32 @@ export const syncEducatorDashboard = async (educatorId) => {
             createdAt: course.createdAt
         }));
 
-        // 8. Calculate revenue per course (from Purchase)
-        const revenuePerCourse = {};
+        const courseStats = [...originalCourseStats, ...pathwayStats];
+
+
+        // 8. Calculate revenue per course/pathway (from Purchase)
+        const revenuePerItem = {};
         purchases.forEach(purchase => {
-            const courseId = purchase.courseId?._id?.toString();
-            if (courseId) {
-                if (!revenuePerCourse[courseId]) {
-                    revenuePerCourse[courseId] = {
-                        courseTitle: purchase.courseId?.courseTitle,
+            const itemId = purchase.courseId?._id?.toString() || purchase.pathwayId?._id?.toString();
+            // Determine title
+            const isCourse = !!purchase.courseId;
+            const itemTitle = isCourse ? purchase.courseId?.courseTitle : purchase.pathwayId?.pathwayTitle;
+
+            if (itemId) {
+                if (!revenuePerItem[itemId]) {
+                    revenuePerItem[itemId] = {
+                        courseTitle: itemTitle,
                         totalRevenue: 0,
                         purchaseCount: 0
                     };
                 }
-                revenuePerCourse[courseId].totalRevenue += Number(purchase.amount) || 0;
-                revenuePerCourse[courseId].purchaseCount += 1;
+                revenuePerItem[itemId].totalRevenue += Number(purchase.amount) || 0;
+                revenuePerItem[itemId].purchaseCount += 1;
             }
         });
 
-        // 9. Top performing courses
-        const topCourses = Object.entries(revenuePerCourse)
+        // 9. Top performing courses (and pathways)
+        const topCourses = Object.entries(revenuePerItem)
             .map(([courseId, data]) => ({
                 courseId,
                 courseTitle: data.courseTitle,
@@ -161,8 +205,8 @@ export const syncEducatorDashboard = async (educatorId) => {
                     lastUpdated: new Date()
                 }
             },
-            { 
-                upsert: true, 
+            {
+                upsert: true,
                 new: true,
                 setDefaultsOnInsert: true,
                 runValidators: true
@@ -182,12 +226,12 @@ export const syncEducatorDashboard = async (educatorId) => {
 export const getEducatorDashboard = async (educatorId) => {
     try {
         let dashboard = await Dashboard.findOne({ educatorId });
-        
+
         // If no dashboard exists or data is stale (older than 5 minutes), sync it
         if (!dashboard || (new Date() - dashboard.lastUpdated) > 5 * 60 * 1000) {
             dashboard = await syncEducatorDashboard(educatorId);
         }
-        
+
         return dashboard;
     } catch (error) {
         console.error('Get dashboard error:', error);

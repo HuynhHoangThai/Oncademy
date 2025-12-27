@@ -404,10 +404,10 @@ const Player = () => {
                           onClick={markLectureComplete}
                           disabled={isMarkingComplete || isLectureCompleted(playerData.lectureId)}
                           className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${isLectureCompleted(playerData.lectureId)
-                              ? 'bg-green-600 text-white cursor-not-allowed'
-                              : isMarkingComplete
-                                ? 'bg-gray-400 text-white cursor-wait'
-                                : 'bg-blue-600 hover:bg-blue-700 text-white'
+                            ? 'bg-green-600 text-white cursor-not-allowed'
+                            : isMarkingComplete
+                              ? 'bg-gray-400 text-white cursor-wait'
+                              : 'bg-blue-600 hover:bg-blue-700 text-white'
                             }`}
                         >
                           <img src={assets.blue_tick_icon} alt="check" className="w-4 h-4" />

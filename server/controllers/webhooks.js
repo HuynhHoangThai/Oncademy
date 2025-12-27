@@ -3,8 +3,9 @@ import User from "../models/User.js";
 import stripe from "stripe";
 import { Purchase } from "../models/Purchase.js";
 import Course from "../models/Course.js";
+import PathwayCourse from "../models/PathwayCourse.js";
 import { syncEducatorDashboard } from "../utils/dashboardHelper.js";
-import { sendCourseEnrollmentEmail } from "../utils/emailService.js";
+import { sendCourseEnrollmentEmail, sendPathwayEnrollmentEmail } from "../utils/emailService.js";
 
 // API Controller Function to Manage Clerk User with database
 export const clerkWebhooks = async (req, res) => {
@@ -112,47 +113,97 @@ export const stripeWebhooks = async (request, response) => {
         try {
           const purchaseData = await Purchase.findById(purchaseId);
           const userData = await User.findById(purchaseData.userId);
-          const courseData = await Course.findById(purchaseData.courseId.toString());
 
-          // Check if student is already enrolled
-          const isAlreadyEnrolled = courseData.enrolledStudents.some(
-            studentId => studentId.toString() === userData._id.toString()
-          );
+          // Handle Pathway Purchase
+          if (purchaseData.pathwayId) {
+            const pathwayData = await PathwayCourse.findById(purchaseData.pathwayId.toString());
 
-          if (!isAlreadyEnrolled) {
-            courseData.enrolledStudents.push(userData._id);
-            await courseData.save();
+            // Check if student is already enrolled
+            const isAlreadyEnrolled = pathwayData.enrolledStudents.some(
+              studentId => studentId.toString() === userData._id.toString()
+            );
 
-            userData.enrolledCourses.push(courseData._id);
-            await userData.save();
+            if (!isAlreadyEnrolled) {
+              pathwayData.enrolledStudents.push(userData._id);
+              await pathwayData.save();
 
-            console.log(`✅ [CHECKOUT] Student ${userData.name} enrolled in course ${courseData.courseTitle}`);
-          } else {
-            console.log(`ℹ️ [CHECKOUT] Student ${userData.name} already enrolled in course ${courseData.courseTitle}`);
-          }
+              userData.enrolledPathways.push(pathwayData._id);
+              await userData.save();
 
-          purchaseData.status = 'completed';
-          await purchaseData.save();
+              console.log(`✅ [CHECKOUT] Student ${userData.name} enrolled in pathway ${pathwayData.pathwayTitle}`);
+            } else {
+              console.log(`ℹ️ [CHECKOUT] Student ${userData.name} already enrolled in pathway ${pathwayData.pathwayTitle}`);
+            }
 
-          // Send enrollment email
-          console.log('🔍 [CHECKOUT] About to send enrollment email to:', userData.email);
-          try {
-            const emailResult = await sendCourseEnrollmentEmail({
-              userEmail: userData.email,
-              userName: userData.name,
-              courseTitle: courseData.courseTitle,
-              courseId: courseData._id.toString()
+            purchaseData.status = 'completed';
+            await purchaseData.save();
+
+            // Send enrollment email
+            console.log('🔍 [CHECKOUT] About to send pathway enrollment email to:', userData.email);
+            try {
+              const emailResult = await sendPathwayEnrollmentEmail({
+                userEmail: userData.email,
+                userName: userData.name,
+                pathwayTitle: pathwayData.pathwayTitle,
+                pathwayId: pathwayData._id.toString()
+              });
+              console.log('✅ [CHECKOUT] Pathway enrollment email result:', emailResult);
+            } catch (emailError) {
+              console.error('❌ [CHECKOUT] Failed to send pathway enrollment email:', emailError);
+            }
+
+            // Sync educator dashboard
+            const educatorId = pathwayData.educator;
+            await syncEducatorDashboard(educatorId).catch(err => {
+              console.error('Dashboard sync error after checkout:', err);
             });
-            console.log('✅ [CHECKOUT] Enrollment email result:', emailResult);
-          } catch (emailError) {
-            console.error('❌ [CHECKOUT] Failed to send enrollment email:', emailError);
+
+          }
+          // Handle Course Purchase
+          else if (purchaseData.courseId) {
+            const courseData = await Course.findById(purchaseData.courseId.toString());
+
+            // Check if student is already enrolled
+            const isAlreadyEnrolled = courseData.enrolledStudents.some(
+              studentId => studentId.toString() === userData._id.toString()
+            );
+
+            if (!isAlreadyEnrolled) {
+              courseData.enrolledStudents.push(userData._id);
+              await courseData.save();
+
+              userData.enrolledCourses.push(courseData._id);
+              await userData.save();
+
+              console.log(`✅ [CHECKOUT] Student ${userData.name} enrolled in course ${courseData.courseTitle}`);
+            } else {
+              console.log(`ℹ️ [CHECKOUT] Student ${userData.name} already enrolled in course ${courseData.courseTitle}`);
+            }
+
+            purchaseData.status = 'completed';
+            await purchaseData.save();
+
+            // Send enrollment email
+            console.log('🔍 [CHECKOUT] About to send enrollment email to:', userData.email);
+            try {
+              const emailResult = await sendCourseEnrollmentEmail({
+                userEmail: userData.email,
+                userName: userData.name,
+                courseTitle: courseData.courseTitle,
+                courseId: courseData._id.toString()
+              });
+              console.log('✅ [CHECKOUT] Enrollment email result:', emailResult);
+            } catch (emailError) {
+              console.error('❌ [CHECKOUT] Failed to send enrollment email:', emailError);
+            }
+
+            // Sync educator dashboard
+            const educatorId = courseData.educator;
+            await syncEducatorDashboard(educatorId).catch(err => {
+              console.error('Dashboard sync error after checkout:', err);
+            });
           }
 
-          // Sync educator dashboard
-          const educatorId = courseData.educator;
-          await syncEducatorDashboard(educatorId).catch(err => {
-            console.error('Dashboard sync error after checkout:', err);
-          });
         } catch (error) {
           console.error('❌ [CHECKOUT] Error processing checkout session:', error);
         }
@@ -174,52 +225,96 @@ export const stripeWebhooks = async (request, response) => {
 
       const purchaseData = await Purchase.findById(purchaseId);
       const userData = await User.findById(purchaseData.userId);
-      const courseData = await Course.findById(purchaseData.courseId.toString());
 
-      // Check if student is already enrolled to prevent duplicates
-      const isAlreadyEnrolled = courseData.enrolledStudents.some(
-        studentId => studentId.toString() === userData._id.toString()
-      );
+      // Handle Pathway Purchase
+      if (purchaseData.pathwayId) {
+        const pathwayData = await PathwayCourse.findById(purchaseData.pathwayId.toString());
 
-      if (!isAlreadyEnrolled) {
-        courseData.enrolledStudents.push(userData._id);
-        await courseData.save();
+        // Check if student is already enrolled
+        const isAlreadyEnrolled = pathwayData.enrolledStudents.some(
+          studentId => studentId.toString() === userData._id.toString()
+        );
 
-        userData.enrolledCourses.push(courseData._id);
-        await userData.save();
+        if (!isAlreadyEnrolled) {
+          pathwayData.enrolledStudents.push(userData._id);
+          await pathwayData.save();
 
-        console.log(`✅ Student ${userData.name} enrolled in course ${courseData.courseTitle}`);
-      } else {
-        console.log(`ℹ️ Student ${userData.name} already enrolled in course ${courseData.courseTitle}`);
-      }
+          userData.enrolledPathways.push(pathwayData._id);
+          await userData.save();
 
-      purchaseData.status = 'completed';
-      await purchaseData.save();
+          console.log(`✅ Student ${userData.name} enrolled in pathway ${pathwayData.pathwayTitle}`);
+        } else {
+          console.log(`ℹ️ Student ${userData.name} already enrolled in pathway ${pathwayData.pathwayTitle}`);
+        }
 
-      // 📧 Send enrollment confirmation email
-      console.log('🔍 [WEBHOOK] About to send enrollment email to:', userData.email);
-      console.log('🔍 [WEBHOOK] User data:', { email: userData.email, name: userData.name });
-      console.log('🔍 [WEBHOOK] Course data:', { title: courseData.courseTitle, id: courseData._id.toString() });
+        purchaseData.status = 'completed';
+        await purchaseData.save();
 
-      try {
-        const emailResult = await sendCourseEnrollmentEmail({
-          userEmail: userData.email,
-          userName: userData.name,
-          courseTitle: courseData.courseTitle,
-          courseId: courseData._id.toString()
+        // 📧 Send enrollment confirmation email
+        console.log('🔍 [WEBHOOK] About to send pathway enrollment email to:', userData.email);
+        try {
+          const emailResult = await sendPathwayEnrollmentEmail({
+            userEmail: userData.email,
+            userName: userData.name,
+            pathwayTitle: pathwayData.pathwayTitle,
+            pathwayId: pathwayData._id.toString()
+          });
+          console.log('✅ [WEBHOOK] Pathway enrollment email result:', emailResult);
+        } catch (emailError) {
+          console.error('❌ [WEBHOOK] Failed to send pathway enrollment email:', emailError);
+        }
+
+        // Sync educator dashboard
+        const educatorId = pathwayData.educator;
+        await syncEducatorDashboard(educatorId).catch(err => {
+          console.error('Dashboard sync error after purchase:', err);
         });
-        console.log('✅ [WEBHOOK] Enrollment email result:', emailResult);
-      } catch (emailError) {
-        console.error('❌ [WEBHOOK] Failed to send enrollment email:', emailError);
-        console.error('❌ [WEBHOOK] Error details:', emailError.message);
-        // Don't fail the webhook if email fails - just log the error
-      }
 
-      // Sync educator dashboard after successful purchase
-      const educatorId = courseData.educator;
-      await syncEducatorDashboard(educatorId).catch(err => {
-        console.error('Dashboard sync error after purchase:', err);
-      });
+      }
+      // Handle Course Purchase
+      else if (purchaseData.courseId) {
+        const courseData = await Course.findById(purchaseData.courseId.toString());
+
+        // Check if student is already enrolled to prevent duplicates
+        const isAlreadyEnrolled = courseData.enrolledStudents.some(
+          studentId => studentId.toString() === userData._id.toString()
+        );
+
+        if (!isAlreadyEnrolled) {
+          courseData.enrolledStudents.push(userData._id);
+          await courseData.save();
+
+          userData.enrolledCourses.push(courseData._id);
+          await userData.save();
+
+          console.log(`✅ Student ${userData.name} enrolled in course ${courseData.courseTitle}`);
+        } else {
+          console.log(`ℹ️ Student ${userData.name} already enrolled in course ${courseData.courseTitle}`);
+        }
+
+        purchaseData.status = 'completed';
+        await purchaseData.save();
+
+        // 📧 Send enrollment confirmation email
+        console.log('🔍 [WEBHOOK] About to send enrollment email to:', userData.email);
+        try {
+          const emailResult = await sendCourseEnrollmentEmail({
+            userEmail: userData.email,
+            userName: userData.name,
+            courseTitle: courseData.courseTitle,
+            courseId: courseData._id.toString()
+          });
+          console.log('✅ [WEBHOOK] Enrollment email result:', emailResult);
+        } catch (emailError) {
+          console.error('❌ [WEBHOOK] Failed to send enrollment email:', emailError);
+        }
+
+        // Sync educator dashboard after successful purchase
+        const educatorId = courseData.educator;
+        await syncEducatorDashboard(educatorId).catch(err => {
+          console.error('Dashboard sync error after purchase:', err);
+        });
+      }
 
       break;
 

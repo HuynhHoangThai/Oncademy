@@ -2,6 +2,7 @@ import User from '../models/User.js';
 import { clerkClient } from '@clerk/express';
 import { getUserId } from '../utils/authHelper.js';
 import Course from '../models/Course.js';
+import PathwayCourse from '../models/PathwayCourse.js';
 import { Purchase } from '../models/Purchase.js';
 import { sendEducatorApprovalEmail, sendEducatorRejectionEmail } from '../utils/emailService.js';
 
@@ -260,38 +261,54 @@ const calculateGlobalStats = async () => {
         }
     ]);
     const totalUsers = await User.countDocuments({});
+
+    // Courses Stats
     const totalCourses = await Course.countDocuments({});
     const totalPublishedCourses = await Course.countDocuments({ isPublished: true });
 
-    const topCourses = await Purchase.aggregate([
+    // Pathways Stats
+    const totalPathways = await PathwayCourse.countDocuments({});
+    const totalPublishedPathways = await PathwayCourse.countDocuments({ isPublished: true });
+
+    // Combine Counts
+    const combinedTotalCourses = totalCourses + totalPathways;
+    const combinedPublished = totalPublishedCourses + totalPublishedPathways;
+    const combinedDraft = (totalCourses - totalPublishedCourses) + (totalPathways - totalPublishedPathways);
+
+    // Top Performing Items (Courses + Pathways)
+    // We can't easily union-lookup two collections in one simple aggregation without complex syntax.
+    // Simpler approach: Group by ID, then populate in JS.
+    const topRevenueItems = await Purchase.aggregate([
         { $match: { status: 'completed' } },
         {
             $group: {
-                _id: '$courseId',
+                _id: { $ifNull: ["$courseId", "$pathwayId"] }, // Group by either ID
                 purchaseCount: { $sum: 1 },
-                totalRevenue: { $sum: '$amount' }
+                totalRevenue: { $sum: '$amount' },
+                isCourse: { $first: { $cond: [{ $ifNull: ["$courseId", false] }, true, false] } } // Helper flag
             }
         },
         { $sort: { totalRevenue: -1 } },
-        { $limit: 5 },
-        {
-            $lookup: {
-                from: 'courses',
-                localField: '_id',
-                foreignField: '_id',
-                as: 'courseDetails'
-            }
-        },
-        { $unwind: '$courseDetails' },
-        {
-            $project: {
-                _id: 0,
-                courseTitle: '$courseDetails.courseTitle',
-                totalRevenue: 1,
-                purchaseCount: 1
-            }
-        }
+        { $limit: 5 }
     ]);
+
+    // Manually populate titles for top items
+    const topCoursesWithDetails = await Promise.all(topRevenueItems.map(async (item) => {
+        let title = 'Unknown';
+        if (item.isCourse) {
+            const course = await Course.findById(item._id).select('courseTitle');
+            if (course) title = course.courseTitle;
+        } else {
+            const pathway = await PathwayCourse.findById(item._id).select('pathwayTitle');
+            if (pathway) title = pathway.pathwayTitle;
+        }
+        return {
+            courseTitle: title, // UI expects "courseTitle"
+            totalRevenue: item.totalRevenue,
+            purchaseCount: item.purchaseCount
+        };
+    }));
+
 
     const recentEnrollments = await Purchase.find({ status: 'completed' })
         .sort({ createdAt: -1 })
@@ -300,13 +317,17 @@ const calculateGlobalStats = async () => {
             path: 'courseId',
             select: 'courseTitle'
         })
-        .select('userId amount createdAt')
+        .populate({
+            path: 'pathwayId',
+            select: 'pathwayTitle'
+        })
+        .select('userId amount createdAt courseId pathwayId')
         .lean();
 
     const stats = purchaseStats[0] || {};
 
-    // Filter out enrollments with null courseId
-    const validEnrollments = recentEnrollments.filter(e => e.courseId !== null);
+    // Filter out enrollments with null product
+    const validEnrollments = recentEnrollments.filter(e => e.courseId || e.pathwayId);
 
     const userIds = validEnrollments.map(e => e.userId);
     const userMap = {};
@@ -317,14 +338,14 @@ const calculateGlobalStats = async () => {
 
     const finalRecentEnrollments = validEnrollments.map(e => ({
         studentName: userMap[e.userId] || 'Unknown User',
-        courseTitle: e.courseId.courseTitle,
+        courseTitle: e.courseId?.courseTitle || e.pathwayId?.pathwayTitle || 'Unknown Item',
         amount: e.amount,
         date: e.createdAt.toLocaleDateString(),
     }));
 
     const courseStatusDistribution = [
-        { label: "Published", count: totalPublishedCourses },
-        { label: "Draft", count: totalCourses - totalPublishedCourses },
+        { label: "Published", count: combinedPublished },
+        { label: "Draft", count: combinedDraft },
     ];
 
     const priceDistribution = await Purchase.aggregate([
@@ -351,10 +372,10 @@ const calculateGlobalStats = async () => {
         totalEarnings: stats.totalEarnings || 0,
         totalPurchases: stats.totalPurchases || 0,
         totalEnrollments: totalUsers || 0,
-        totalCourses: totalCourses || 0,
+        totalCourses: combinedTotalCourses || 0,
 
         monthlyEarnings: [],
-        topCourses: [],
+        topCourses: topCoursesWithDetails,
         priceDistribution: priceDistribution,
         recentEnrollments: finalRecentEnrollments,
         courseStatusDistribution: courseStatusDistribution,
@@ -512,6 +533,75 @@ export const rejectCourse = async (req, res) => {
         return res.json({ success: true, message: 'Course rejected.', course: updatedCourse });
     } catch (error) {
         console.error('Reject Course Error:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+// ===================== PATHWAY APPROVAL =====================
+
+export const getPendingPathways = async (req, res) => {
+    try {
+        const pendingPathways = await PathwayCourse.find({ approvalStatus: 'pending' })
+            .populate('educator', 'name email imageUrl')
+            .sort({ createdAt: 1 })
+            .lean();
+
+        return res.json({ success: true, pathways: pendingPathways });
+    } catch (error) {
+        console.error('Get Pending Pathways Error:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+export const approvePathway = async (req, res) => {
+    try {
+        const adminId = getUserId(req);
+        const { pathwayId } = req.body;
+
+        const updatedPathway = await PathwayCourse.findByIdAndUpdate(
+            pathwayId,
+            {
+                approvalStatus: 'approved',
+                isPublished: true,
+                approvedBy: adminId
+            },
+            { new: true }
+        );
+
+        if (!updatedPathway) {
+            return res.status(404).json({ success: false, message: 'Pathway not found.' });
+        }
+
+        return res.json({ success: true, message: 'Combo approved and published.', pathway: updatedPathway });
+    } catch (error) {
+        console.error('Approve Pathway Error:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+export const rejectPathway = async (req, res) => {
+    try {
+        const adminId = getUserId(req);
+        const { pathwayId, rejectionReason } = req.body;
+
+        const updatedPathway = await PathwayCourse.findByIdAndUpdate(
+            pathwayId,
+            {
+                approvalStatus: 'rejected',
+                isPublished: false,
+                approvedBy: adminId,
+                rejectionReason: rejectionReason || ''
+            },
+            { new: true }
+        );
+
+        if (!updatedPathway) {
+            return res.status(404).json({ success: false, message: 'Pathway not found.' });
+        }
+
+        return res.json({ success: true, message: 'Combo rejected.', pathway: updatedPathway });
+    } catch (error) {
+        console.error('Reject Pathway Error:', error);
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };

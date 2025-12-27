@@ -1,18 +1,46 @@
 import Course from '../models/Course.js'
-import {Purchase} from '../models/Purchase.js'
+import { Purchase } from '../models/Purchase.js'
 import User from '../models/User.js'
-import {CourseProgress} from '../models/CourseProgress.js'
+import { CourseProgress } from '../models/CourseProgress.js'
 import stripe from 'stripe'
 import { getUserId } from '../utils/authHelper.js'
+import PathwayCourse from "../models/PathwayCourse.js";
+import { PathwayProgress } from "../models/PathwayProgress.js";
+
+// Get User Favorites (Courses and Pathways)
+export const getUserFavorites = async (req, res) => {
+    try {
+        const userId = getUserId(req);
+
+        if (!userId) {
+            return res.json({ success: false, message: 'User not authenticated' });
+        }
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.json({ success: false, message: 'User Not Found' });
+        }
+
+        res.json({
+            success: true,
+            favorites: user.favoriteCourses || [],
+            favoritePathways: user.favoritePathways || []
+        });
+
+    } catch (error) {
+        res.json({ success: false, message: error.message });
+    }
+}
 
 export const getUserData = async (req, res) => {
     try {
         const userId = getUserId(req);
-        
+
         if (!userId) {
             return res.json({ success: false, message: 'User not authenticated' });
         }
-        
+
         const user = await User.findById(userId);
 
         if (!user) {
@@ -27,7 +55,7 @@ export const getUserData = async (req, res) => {
 export const userEnrolledCourses = async (req, res) => {
     try {
         const userId = getUserId(req);
-        
+
         if (!userId) {
             return res.json({ success: false, message: 'User not authenticated' });
         }
@@ -38,9 +66,9 @@ export const userEnrolledCourses = async (req, res) => {
 
         // Get progress data for all enrolled courses
         const courseIds = userData.enrolledCourses.map(course => course._id)
-        const progressData = await CourseProgress.find({ 
-            userId, 
-            courseId: { $in: courseIds } 
+        const progressData = await CourseProgress.find({
+            userId,
+            courseId: { $in: courseIds }
         })
 
         // Create a map of courseId -> progress for easy lookup
@@ -78,18 +106,18 @@ export const purchaseCourse = async (req, res) => {
         const { courseId } = req.body
         const { origin } = req.headers
         const userId = getUserId(req);
-        
+
         if (!userId) {
             return res.json({ success: false, message: 'User not authenticated' });
         }
-        
+
         if (!courseId) {
             return res.json({ success: false, message: 'Course ID is required' })
         }
 
         const courseData = await Course.findById(courseId)
         const userData = await User.findById(userId)
-        
+
         if (!userData || !courseData) {
             return res.json({ success: false, message: 'Data Not Found' })
         }
@@ -100,8 +128,8 @@ export const purchaseCourse = async (req, res) => {
         );
 
         if (isAlreadyEnrolled) {
-            return res.json({ 
-                success: false, 
+            return res.json({
+                success: false,
                 message: 'You are already enrolled in this course',
                 alreadyEnrolled: true
             });
@@ -116,8 +144,8 @@ export const purchaseCourse = async (req, res) => {
 
         if (existingPurchase) {
             if (existingPurchase.status === 'completed') {
-                return res.json({ 
-                    success: false, 
+                return res.json({
+                    success: false,
                     message: 'You have already purchased this course',
                     alreadyEnrolled: true
                 });
@@ -127,19 +155,19 @@ export const purchaseCourse = async (req, res) => {
         }
 
         const amount = Number((courseData.coursePrice - courseData.discount * courseData.coursePrice / 100).toFixed(2))
-        
+
         const purchaseData = {
             courseId: courseData._id,
             userId,
             amount
         }
-        
+
         const newPurchase = await Purchase.create(purchaseData)
-        
+
         // Stripe Gateway Initialize
         const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY)
         const currency = (process.env.CURRENCY || 'usd').toLowerCase()
-        
+
         // Creating line items to for Stripe
         const line_items = [{
             price_data: {
@@ -151,7 +179,7 @@ export const purchaseCourse = async (req, res) => {
             },
             quantity: 1
         }]
-        
+
         const session = await stripeInstance.checkout.sessions.create({
             success_url: `${origin}/loading/my-enrollments`,
             cancel_url: `${origin}/`,
@@ -161,7 +189,7 @@ export const purchaseCourse = async (req, res) => {
                 purchaseId: newPurchase._id.toString()
             }
         })
-        
+
         res.json({ success: true, sessionUrl: session.url });
     } catch (error) {
         console.error('Purchase error:', error);
@@ -173,7 +201,7 @@ export const purchaseCourse = async (req, res) => {
 export const updateUserCourseProgress = async (req, res) => {
     try {
         const userId = getUserId(req);
-        
+
         if (!userId) {
             return res.json({ success: false, message: 'User not authenticated' });
         }
@@ -206,23 +234,23 @@ export const updateUserCourseProgress = async (req, res) => {
 
             progressData.lectureCompleted.push(lectureId)
             progressData.lastAccessedLecture = lectureId
-            
+
             // Calculate progress percentage
             const completedCount = progressData.lectureCompleted.length
             progressData.progressPercentage = Math.round((completedCount / totalLectures) * 100)
-            
+
             // Mark course as completed if all lectures are done
             if (completedCount >= totalLectures) {
                 progressData.completed = true
             }
-            
+
             await progressData.save()
 
         } else {
 
             const completedCount = 1
             const progressPercentage = Math.round((completedCount / totalLectures) * 100)
-            
+
             progressData = await CourseProgress.create({
                 userId,
                 courseId,
@@ -244,7 +272,7 @@ export const updateUserCourseProgress = async (req, res) => {
 export const getUserCourseProgress = async (req, res) => {
     try {
         const userId = getUserId(req);
-        
+
         if (!userId) {
             return res.json({ success: false, message: 'User not authenticated' });
         }
@@ -264,11 +292,11 @@ export const getUserCourseProgress = async (req, res) => {
 export const addUserRating = async (req, res) => {
     try {
         const userId = getUserId(req);
-        
+
         if (!userId) {
             return res.json({ success: false, message: 'User not authenticated' });
         }
-        
+
         const { courseId, rating } = req.body;
 
         // Validate inputs
@@ -307,29 +335,7 @@ export const addUserRating = async (req, res) => {
     }
 };
 
-export const getUserFavorites = async (req, res) => {
-    try {
-        const userId = getUserId(req);
-        if (!userId) {
-            return res.status(401).json({ success: false, message: 'Authentication required.' });
-        }
 
-        const user = await User.findById(userId).select('favoriteCourses');
-
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found.' });
-        }
-
-        return res.json({
-            success: true,
-            favorites: user.favoriteCourses || [] 
-        });
-
-    } catch (error) {
-        console.error('Fetch Favorites Error:', error);
-        return res.status(500).json({ success: false, message: 'Internal server error.' });
-    }
-};
 
 export const toggleFavoriteCourse = async (req, res) => {
     try {
@@ -350,7 +356,7 @@ export const toggleFavoriteCourse = async (req, res) => {
             updateAction = { $pull: { favoriteCourses: courseId } };
             message = 'Course removed from favorites.';
         } else {
-            updateAction = { $addToSet: { favoriteCourses: courseId } }; 
+            updateAction = { $addToSet: { favoriteCourses: courseId } };
             message = 'Course added to favorites.';
         }
 
@@ -363,11 +369,175 @@ export const toggleFavoriteCourse = async (req, res) => {
         return res.json({
             success: true,
             message: message,
-            favorites: updatedUser.favoriteCourses 
+            favorites: updatedUser.favoriteCourses
         });
 
     } catch (error) {
         console.error('Toggle Favorite Error:', error);
         return res.status(500).json({ success: false, message: 'Internal server error.' });
+    }
+};
+
+export const userEnrolledPathways = async (req, res) => {
+    try {
+        const userId = getUserId(req);
+        if (!userId) {
+            return res.json({ success: false, message: 'User not authenticated' });
+        }
+        const userData = await User.findById(userId).populate('enrolledPathways');
+        if (!userData) {
+            return res.json({ success: false, message: 'User Not Found' });
+        }
+        res.json({ success: true, enrolledPathways: userData.enrolledPathways || [] });
+    } catch (error) {
+        console.error('Get enrolled pathways error:', error);
+        res.json({ success: false, message: error.message });
+    }
+}
+
+// Update User Pathway Progress
+export const updatePathwayProgress = async (req, res) => {
+    try {
+        const userId = getUserId(req);
+        const { pathwayId, lectureId } = req.body;
+
+        if (!pathwayId || !lectureId) {
+            return res.json({ success: false, message: 'Pathway ID and Lecture ID are required' });
+        }
+
+        // Get pathway data to calculate total lectures
+        const pathwayData = await PathwayCourse.findById(pathwayId);
+        if (!pathwayData) {
+            return res.json({ success: false, message: 'Pathway not found' });
+        }
+
+        let totalLectures = 0;
+        pathwayData.phases.forEach(phase => {
+            phase.chapters.forEach(chapter => {
+                totalLectures += chapter.chapterContent.length;
+            });
+        });
+
+        let progressData = await PathwayProgress.findOne({ userId, pathwayId });
+
+        if (progressData) {
+            if (progressData.lectureCompleted.includes(lectureId)) {
+                return res.json({ success: true, message: 'Lecture Already Completed', progress: progressData });
+            }
+
+            progressData.lectureCompleted.push(lectureId);
+            progressData.lastAccessedLecture = lectureId;
+
+            // Calculate progress percentage
+            const completedCount = progressData.lectureCompleted.length;
+            progressData.progressPercentage = Math.round((completedCount / totalLectures) * 100);
+
+            if (completedCount >= totalLectures) {
+                progressData.completed = true;
+            }
+
+            await progressData.save();
+        } else {
+            const completedCount = 1;
+            const progressPercentage = Math.round((completedCount / totalLectures) * 100);
+
+            progressData = await PathwayProgress.create({
+                userId,
+                pathwayId,
+                lectureCompleted: [lectureId],
+                lastAccessedLecture: lectureId,
+                progressPercentage,
+                completed: completedCount >= totalLectures
+            });
+        }
+
+        res.json({ success: true, message: 'Progress Updated', progress: progressData });
+
+    } catch (error) {
+        console.error('Update pathway progress error:', error);
+        res.json({ success: false, message: error.message });
+    }
+};
+
+// Get User Pathway Progress
+export const getPathwayProgress = async (req, res) => {
+    try {
+        const userId = getUserId(req);
+        const { pathwayId } = req.body;
+
+        const progressData = await PathwayProgress.findOne({ userId, pathwayId });
+        res.json({ success: true, progressData });
+    } catch (error) {
+        res.json({ success: false, message: error.message });
+    }
+};
+
+// Add Rating to Pathway
+export const addPathwayRating = async (req, res) => {
+    const userId = getUserId(req);
+    const { pathwayId, rating } = req.body;
+
+    if (!userId || !pathwayId || !rating) {
+        return res.json({ success: false, message: 'Missing Details' });
+    }
+    if (rating < 1 || rating > 5) {
+        return res.json({ success: false, message: 'Invalid Rating' });
+    }
+
+    try {
+        const pathway = await PathwayCourse.findById(pathwayId);
+        if (!pathway) {
+            return res.json({ success: false, message: 'Pathway not found' });
+        }
+
+        const existingRatingIndex = pathway.courseRatings.findIndex(r => r.userId === userId);
+        if (existingRatingIndex > -1) {
+            // Update existing rating
+            pathway.courseRatings[existingRatingIndex].rating = rating;
+        } else {
+            // Add new rating
+            pathway.courseRatings.push({ userId, rating });
+        }
+
+        await pathway.save();
+        return res.json({ success: true, message: 'Rating updated' });
+
+    } catch (error) {
+        return res.json({ success: false, message: error.message });
+    }
+};
+
+// Toggle Favorite Pathway
+export const toggleFavoritePathway = async (req, res) => {
+    try {
+        const userId = getUserId(req);
+        const { pathwayId } = req.body;
+
+        if (!userId || !pathwayId) {
+            return res.json({ success: false, message: 'Missing Details' });
+        }
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.json({ success: false, message: 'User not found' });
+        }
+
+        if (!user.favoritePathways) {
+            user.favoritePathways = [];
+        }
+
+        if (user.favoritePathways.includes(pathwayId)) {
+            user.favoritePathways = user.favoritePathways.filter(id => id !== pathwayId);
+            await user.save();
+            return res.json({ success: true, message: 'Removed from favorites', favoritePathways: user.favoritePathways });
+        } else {
+            user.favoritePathways.push(pathwayId);
+            await user.save();
+            return res.json({ success: true, message: 'Added to favorites', favoritePathways: user.favoritePathways });
+        }
+
+    } catch (error) {
+        res.json({ success: false, message: error.message });
     }
 };

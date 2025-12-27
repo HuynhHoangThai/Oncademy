@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '@clerk/clerk-react'
+import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { toast } from 'react-toastify'
 import Loading from '../../components/students/Loading';
@@ -7,7 +8,10 @@ import { AlertTriangle } from 'lucide-react';
 
 const MyCourses = () => {
   const { getToken } = useAuth()
+  const navigate = useNavigate()
   const [courses, setCourses] = useState([])
+  const [pathways, setPathways] = useState([])
+  const [viewMode, setViewMode] = useState('courses') // 'courses' or 'combos'
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [quizStats, setQuizStats] = useState({ totalAttempts: 0, avgScore: 0, passRate: 0 })
@@ -64,6 +68,23 @@ const MyCourses = () => {
       toast.error('Failed to load courses')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Fetch pathways từ API
+  const fetchPathways = async () => {
+    try {
+      const token = await getToken()
+      const { data } = await axios.get(`${backendUrl}/api/pathway/educator/pathways`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (data.success) {
+        setPathways(data.pathways || [])
+      }
+    } catch (error) {
+      console.error('Error fetching pathways:', error)
+      toast.error('Failed to load combos')
     }
   }
 
@@ -336,6 +357,7 @@ const MyCourses = () => {
   useEffect(() => {
     const loadData = async () => {
       await fetchCourses()
+      await fetchPathways()
       await fetchQuizStats()
       await fetchStudentAttempts()
     }
@@ -393,12 +415,114 @@ const MyCourses = () => {
     }
   };
 
+  // Handle course edit - navigate to edit page
+  const handleEditCourse = (course) => {
+    navigate(`/educator/edit-course/${course._id}`);
+  };
+
+  // Handle pathway toggle publish
+  const handleTogglePublishPathway = async (pathway) => {
+    if (pathway.approvalStatus !== 'approved') {
+      return toast.warn("Combo must be approved by Admin before publishing.");
+    }
+
+    try {
+      const token = await getToken();
+      const { data } = await axios.post(
+        `${backendUrl}/api/pathway/toggle-publish`,
+        { pathwayId: pathway._id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (data.success) {
+        toast.success(data.message);
+        setPathways(pathways.map(p =>
+          p._id === pathway._id ? { ...p, isPublished: data.isPublished } : p
+        ));
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error("Publish toggle error:", error);
+      toast.error("Failed to update visibility.");
+    }
+  };
+
+  // Handle pathway delete
+  const handleDeletePathway = async (pathway) => {
+    if (!window.confirm(`Are you sure you want to delete "${pathway.pathwayTitle}"?`)) {
+      return;
+    }
+
+    try {
+      const token = await getToken();
+      const { data } = await axios.delete(
+        `${backendUrl}/api/pathway/${pathway._id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (data.success) {
+        toast.success('Combo deleted successfully');
+        setPathways(pathways.filter(p => p._id !== pathway._id));
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast.error("Failed to delete combo.");
+    }
+  };
+
+  // Handle pathway edit - navigate to edit page
+  const handleEditPathway = (pathway) => {
+    navigate(`/educator/edit-pathway/${pathway._id}`);
+  };
+
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 to-white flex flex-col items-center py-10 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-7xl flex flex-col gap-6">
         {/* Header with Sync Button */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-blue-700">My Courses</h1>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-blue-700 mb-4">My Courses</h1>
+
+            {/* Tab Switcher */}
+            <div className="flex gap-2 bg-gray-100 p-1 rounded-lg w-fit">
+              <button
+                onClick={() => setViewMode('courses')}
+                className={`px-4 sm:px-6 py-2 rounded-md font-medium transition-all text-sm sm:text-base ${viewMode === 'courses'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-transparent text-gray-600 hover:text-gray-800'
+                  }`}
+              >
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                  <span className="hidden sm:inline">Courses</span>
+                  <span className="sm:hidden">Courses</span>
+                  <span>({courses.length})</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setViewMode('combos')}
+                className={`px-4 sm:px-6 py-2 rounded-md font-medium transition-all text-sm sm:text-base ${viewMode === 'combos'
+                  ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-md'
+                  : 'bg-transparent text-gray-600 hover:text-gray-800'
+                  }`}
+              >
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                  </svg>
+                  <span className="hidden sm:inline">Course Combos</span>
+
+                  <span>({pathways.length})</span>
+                </div>
+              </button>
+            </div>
+          </div>
           <button
             onClick={syncDashboard}
             disabled={syncing}
@@ -421,188 +545,298 @@ const MyCourses = () => {
           </button>
         </div>
 
-        {/* Courses Table */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-4 sm:p-6 overflow-x-auto">
-          {courses.length === 0 ? (
-            <div className="text-center py-12">
-              <svg className="mx-auto h-16 w-16 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
-              <p className="mt-4 text-gray-500 text-lg font-medium">No courses yet</p>
-              <p className="text-gray-400 text-sm mb-6">Create your first course to get started</p>
-              <button
-                onClick={() => window.location.href = '/educator/add-course'}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
-              >
-                Create Course
-              </button>
-            </div>
-          ) : (
-            <table className="min-w-full text-sm">
-              <thead className="bg-blue-50 text-blue-700">
-                <tr>
-                  <th className="px-4 py-3 font-semibold text-left">Course</th>
-                  <th className="px-4 py-3 font-semibold text-center">Status</th>
-                  <th className="px-4 py-3 font-semibold text-center hidden md:table-cell">Price</th>
-                  <th className="px-4 py-3 font-semibold text-center hidden sm:table-cell">Students</th>
-                  <th className="px-4 py-3 font-semibold text-center hidden lg:table-cell">Quizzes</th>
-                  <th className="px-4 py-3 font-semibold text-center hidden xl:table-cell">Published On</th>
-                  <th className="px-4 py-3 font-semibold text-center">Actions</th>
-                  <th className="px-4 py-3 font-semibold text-center">Visibility</th>
-                </tr>
-              </thead>
-              <tbody className="text-gray-700">
-                {courses.map((course) => {
-                  const students = Array.isArray(course.enrolledStudents) ? course.enrolledStudents.length : 0
-                  const price = Number(course.coursePrice || 0)
-                  const discount = Number(course.discount || 0)
-                  const finalPrice = price - (discount * price) / 100
-                  const quizCount = course.quizCount || 0
+        {/* Courses/Combos Table */}
+        <div className={`bg-white rounded-2xl shadow-xl p-4 sm:p-6 overflow-x-auto ${viewMode === 'combos' ? 'border-2 border-teal-200' : 'border border-gray-200'
+          }`}>
+          {viewMode === 'courses' ? (
+            // COURSES TABLE
+            courses.length === 0 ? (
+              <div className="text-center py-12">
+                <svg className="mx-auto h-16 w-16 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                <p className="mt-4 text-gray-500 text-lg font-medium">No courses yet</p>
+                <p className="text-gray-400 text-sm mb-6">Create your first course to get started</p>
+                <button
+                  onClick={() => window.location.href = '/educator/add-course'}
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                >
+                  Create Course
+                </button>
+              </div>
+            ) : (
+              <table className="min-w-full text-sm">
+                <thead className="bg-blue-50 text-blue-700">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold text-left">Course</th>
+                    <th className="px-4 py-3 font-semibold text-center">Status</th>
+                    <th className="px-4 py-3 font-semibold text-center hidden md:table-cell">Price</th>
+                    <th className="px-4 py-3 font-semibold text-center hidden sm:table-cell">Students</th>
+                    <th className="px-4 py-3 font-semibold text-center hidden lg:table-cell">Quizzes</th>
+                    <th className="px-4 py-3 font-semibold text-center hidden xl:table-cell">Published On</th>
+                    <th className="px-4 py-3 font-semibold text-center">Actions</th>
+                    <th className="px-4 py-3 font-semibold text-center">Visibility</th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-700">
+                  {courses.map((course) => {
+                    const students = Array.isArray(course.enrolledStudents) ? course.enrolledStudents.length : 0
+                    const price = Number(course.coursePrice || 0)
+                    const discount = Number(course.discount || 0)
+                    const finalPrice = price - (discount * price) / 100
+                    const quizCount = course.quizCount || 0
 
-                  return (
-                    <tr key={course._id} className="border-b last:border-b-0 border-gray-100 hover:bg-blue-50 transition">
-                      <td className="px-4 py-3 min-w-[220px]">
-                        <div className="flex items-center gap-3 sm:gap-4">
-                          <img
-                            src={course.courseThumbnail}
-                            alt={course.courseTitle}
-                            className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg object-cover border-2 border-blue-200 shadow flex-shrink-0"
-                          />
-                          <span className="truncate font-semibold text-sm sm:text-base lg:text-lg">{course.courseTitle}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {course.isPublished ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-                            Published
-                          </span>
-                        ) : course.approvalStatus === 'rejected' ? (
-                          <div className="flex flex-col items-center">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200 mb-1">
-                              Rejected
-                            </span>
-                            {/* Hiển thị lý do từ chối nếu có (Tooltip khi hover) */}
-                            {course.rejectionReason && (
-                              <div className="group relative cursor-help">
-                                <span className="text-[14px] text-red-600 underline decoration-dotted">Why?</span>
-                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 p-2 bg-gray-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                                  {course.rejectionReason}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
-                            Pending
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-center font-medium hidden md:table-cell">
-                        {discount > 0 ? (
-                          <div className="flex flex-col items-center">
-                            <span className="line-through text-gray-400 text-xs">{currency}{price}</span>
-                            <span className="text-blue-700 font-bold">{currency}{finalPrice.toFixed(2)}</span>
-                          </div>
-                        ) : (
-                          <span className="font-bold text-blue-700">{currency}{price}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-center hidden sm:table-cell">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                          {students}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center hidden lg:table-cell">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
-                          {quizCount}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center text-gray-500 text-xs sm:text-sm hidden xl:table-cell">
-                        {new Date(course.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => openEditDialog(course)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 hover:text-blue-800 rounded-lg font-medium transition-colors text-sm"
-                            title="Edit course"
-                          >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                            <span className="hidden sm:inline">Edit</span>
-                          </button>
-                          <button
-                            onClick={() => openDeleteDialog(course)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 hover:text-red-800 rounded-lg font-medium transition-colors text-sm"
-                            title="Delete course"
-                          >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            <span className="hidden sm:inline">Delete</span>
-                          </button>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {course.approvalStatus === 'approved' ? (
-                          <button
-                            onClick={() => handleTogglePublish(course)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${course.isPublished ? 'bg-green-600' : 'bg-gray-300'
-                              }`}
-                            title={course.isPublished ? "Click to Unpublish" : "Click to Publish"}
-                          >
-                            <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${course.isPublished ? 'translate-x-6' : 'translate-x-1'
-                                }`}
+                    return (
+                      <tr key={course._id} className="border-b last:border-b-0 border-gray-100 hover:bg-blue-50 transition">
+                        <td className="px-4 py-3 min-w-[220px]">
+                          <div className="flex items-center gap-3 sm:gap-4">
+                            <img
+                              src={course.courseThumbnail}
+                              alt={course.courseTitle}
+                              className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg object-cover border-2 border-blue-200 shadow flex-shrink-0"
                             />
-                          </button>
-                        ) : (
-                          <span className="text-xs text-gray-400 italic">
-                            {course.approvalStatus === 'pending' ? 'Reviewing' : 'Restricted'}
+                            <span className="truncate font-semibold text-sm sm:text-base lg:text-lg">{course.courseTitle}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {course.isPublished ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                              Published
+                            </span>
+                          ) : course.approvalStatus === 'rejected' ? (
+                            <div className="flex flex-col items-center">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200 mb-1">
+                                Rejected
+                              </span>
+                              {/* Hiển thị lý do từ chối nếu có (Tooltip khi hover) */}
+                              {course.rejectionReason && (
+                                <div className="group relative cursor-help">
+                                  <span className="text-[14px] text-red-600 underline decoration-dotted">Why?</span>
+                                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 p-2 bg-gray-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                                    {course.rejectionReason}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
+                              Pending
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center font-medium hidden md:table-cell">
+                          {discount > 0 ? (
+                            <div className="flex flex-col items-center">
+                              <span className="line-through text-gray-400 text-xs">{currency}{price}</span>
+                              <span className="text-blue-700 font-bold">{currency}{finalPrice.toFixed(2)}</span>
+                            </div>
+                          ) : (
+                            <span className="font-bold text-blue-700">{currency}{price}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center hidden sm:table-cell">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                            {students}
                           </span>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                        </td>
+                        <td className="px-4 py-3 text-center hidden lg:table-cell">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                            {quizCount}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center text-gray-500 text-xs sm:text-sm hidden xl:table-cell">
+                          {new Date(course.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleEditCourse(course)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 hover:text-blue-800 rounded-lg font-medium transition-colors text-sm"
+                              title="Edit course"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                              <span className="hidden sm:inline">Edit</span>
+                            </button>
+                            <button
+                              onClick={() => openDeleteDialog(course)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 hover:text-red-800 rounded-lg font-medium transition-colors text-sm"
+                              title="Delete course"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              <span className="hidden sm:inline">Delete</span>
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {course.approvalStatus === 'approved' ? (
+                            <button
+                              onClick={() => handleTogglePublish(course)}
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${course.isPublished ? 'bg-green-600' : 'bg-gray-300'
+                                }`}
+                              title={course.isPublished ? "Click to Unpublish" : "Click to Publish"}
+                            >
+                              <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${course.isPublished ? 'translate-x-6' : 'translate-x-1'
+                                  }`}
+                              />
+                            </button>
+                          ) : (
+                            <span className="text-xs text-gray-400 italic">
+                              {course.approvalStatus === 'pending' ? 'Reviewing' : 'Restricted'}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            )
+          ) : (
+            // COMBOS TABLE
+            pathways.length === 0 ? (
+              <div className="text-center py-12">
+                <svg className="mx-auto h-16 w-16 text-teal-300 mb-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                </svg>
+                <p className="mt-4 text-gray-500 text-lg font-medium">No course combos yet</p>
+                <p className="text-gray-400 text-sm mb-6">Create your first combo to get started</p>
+                <button
+                  onClick={() => window.location.href = '/educator/add-pathway'}
+                  className="px-6 py-3 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-medium rounded-lg transition-colors"
+                >
+                  Create Course Combo
+                </button>
+              </div>
+            ) : (
+              <table className="min-w-full text-sm">
+                <thead className="bg-gradient-to-r from-teal-50 to-emerald-50 text-teal-700">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold text-left">Course Combo</th>
+                    <th className="px-4 py-3 font-semibold text-center">Status</th>
+                    <th className="px-4 py-3 font-semibold text-center hidden md:table-cell">Price</th>
+                    <th className="px-4 py-3 font-semibold text-center hidden sm:table-cell">Students</th>
+                    <th className="px-4 py-3 font-semibold text-center hidden lg:table-cell">Phases</th>
+                    <th className="px-4 py-3 font-semibold text-center hidden xl:table-cell">Created</th>
+                    <th className="px-4 py-3 font-semibold text-center">Actions</th>
+                    <th className="px-4 py-3 font-semibold text-center">Visibility</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pathways.map((pathway) => {
+                    const price = pathway.pathwayPrice || 0
+                    const discount = pathway.discount || 0
+                    const finalPrice = price - (price * discount / 100)
+                    const students = Array.isArray(pathway.enrolledStudents) ? pathway.enrolledStudents.length : 0
+                    const phases = pathway.phases?.length || 0
+
+                    const statusConfig = {
+                      pending: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Pending' },
+                      approved: { bg: 'bg-green-100', text: 'text-green-700', label: 'Approved' },
+                      rejected: { bg: 'bg-red-100', text: 'text-red-700', label: 'Rejected' }
+                    }
+                    const status = statusConfig[pathway.approvalStatus] || statusConfig.pending
+
+                    return (
+                      <tr key={pathway._id} className="border-b border-gray-100 hover:bg-teal-50/30 transition">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="relative flex-shrink-0">
+                              <img
+                                src={pathway.pathwayThumbnail || '/placeholder.jpg'}
+                                alt={pathway.pathwayTitle}
+                                className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg shadow-md border-2 border-teal-200"
+                              />
+                              <div className="absolute -top-1 -right-1 bg-gradient-to-r from-teal-600 to-emerald-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                                COMBO
+                              </div>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="font-semibold text-gray-800 mb-1 line-clamp-2">{pathway.pathwayTitle}</h3>
+                              <p className="text-xs text-gray-500">{phases} phase{phases !== 1 ? 's' : ''}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${status.bg} ${status.text}`}>
+                            {status.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center font-medium hidden md:table-cell">
+                          {discount > 0 ? (
+                            <div className="flex flex-col items-center">
+                              <span className="line-through text-gray-400 text-xs">{currency}{price}</span>
+                              <span className="text-teal-700 font-bold">{currency}{finalPrice.toFixed(2)}</span>
+                            </div>
+                          ) : (
+                            <span className="font-bold text-teal-700">{currency}{price}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center hidden sm:table-cell">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-teal-100 text-teal-800">
+                            {students}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center hidden lg:table-cell">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800">
+                            {phases}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center text-gray-500 text-xs sm:text-sm hidden xl:table-cell">
+                          {new Date(pathway.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleEditPathway(pathway)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-teal-100 hover:bg-teal-200 text-teal-700 hover:text-teal-800 rounded-lg font-medium transition-colors text-sm"
+                              title="Edit combo"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                              <span className="hidden sm:inline">Edit</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeletePathway(pathway)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 hover:text-red-800 rounded-lg font-medium transition-colors text-sm"
+                              title="Delete combo"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              <span className="hidden sm:inline">Delete</span>
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {pathway.approvalStatus === 'approved' ? (
+                            <button
+                              onClick={() => handleTogglePublishPathway(pathway)}
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${pathway.isPublished ? 'bg-teal-600' : 'bg-gray-300'
+                                }`}
+                            >
+                              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${pathway.isPublished ? 'translate-x-6' : 'translate-x-1'
+                                }`} />
+                            </button>
+                          ) : (
+                            <span className="text-xs text-gray-400 italic">Reviewing</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            )
           )}
         </div>
 
-        {/* Summary Stats */}
-        {courses.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white rounded-xl shadow-md border border-gray-200 p-4">
-              <p className="text-gray-500 text-sm">Total Courses</p>
-              <p className="text-2xl font-bold text-blue-700">{courses.length}</p>
-            </div>
-            <div className="bg-white rounded-xl shadow-md border border-gray-200 p-4">
-              <p className="text-gray-500 text-sm">Total Students</p>
-              <p className="text-2xl font-bold text-blue-700">
-                {courses.reduce((sum, course) => sum + (Array.isArray(course.enrolledStudents) ? course.enrolledStudents.length : 0), 0)}
-              </p>
-            </div>
-            <div className="bg-white rounded-xl shadow-md border border-gray-200 p-4">
-              <p className="text-gray-500 text-sm mb-2">Quiz Statistics</p>
-              <div className="space-y-1">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-600">Total Attempts:</span>
-                  <span className="text-sm font-bold text-purple-700">{quizStats.totalAttempts}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-600">Avg Score:</span>
-                  <span className="text-sm font-bold text-blue-700">{quizStats.avgScore.toFixed(1)}%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-600">Pass Rate:</span>
-                  <span className="text-sm font-bold text-green-700">{quizStats.passRate.toFixed(1)}%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+
 
         {/* Student Quiz Attempts Section */}
         {studentAttempts.length > 0 && (

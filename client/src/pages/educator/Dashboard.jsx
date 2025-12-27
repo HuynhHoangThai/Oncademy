@@ -45,30 +45,29 @@ const Dashboard = () => {
             <button
               onClick={handleManualRefresh}
               disabled={isFetching}
-              className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all w-full sm:w-auto ${
-                isFetching 
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+              className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all w-full sm:w-auto ${isFetching
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-blue-500 text-white hover:bg-blue-600 active:scale-95'
-              }`}
+                }`}
             >
-              <svg 
-                className={`w-5 h-5 ${isFetching ? 'animate-spin' : ''}`} 
-                fill="none" 
-                stroke="currentColor" 
+              <svg
+                className={`w-5 h-5 ${isFetching ? 'animate-spin' : ''}`}
+                fill="none"
+                stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                 />
               </svg>
               {isFetching ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
         </div>
-        
+
         {/* Top Cards */}
         <div className="flex flex-wrap gap-6 justify-center">
           {/* Card 1 - Total Enrollments */}
@@ -78,7 +77,7 @@ const Dashboard = () => {
             </div>
             <div>
               <p className="text-3xl font-bold text-blue-700">{dashboardData.totalEnrollments || 0}</p>
-              <p className="text-base text-gray-500 font-medium">Unique Students</p>
+              <p className="text-base text-gray-500 font-medium">Total Students</p>
             </div>
           </div>
           {/* Card 2 - Total Courses */}
@@ -153,7 +152,7 @@ const Dashboard = () => {
                 return (
                   <div key={index} className="flex-1 flex flex-col items-center gap-2">
                     <div className="text-xs font-semibold text-gray-600">{currency}{Math.floor(item.earnings)}</div>
-                    <div 
+                    <div
                       className="w-full bg-gradient-to-t from-blue-500 to-blue-300 rounded-t-lg transition-all hover:from-blue-600 hover:to-blue-400"
                       style={{ height: `${height}%`, minHeight: item.earnings > 0 ? '20px' : '0' }}
                       title={`${item.month}: ${currency}${item.earnings}`}
@@ -175,8 +174,8 @@ const Dashboard = () => {
                 <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow">
                   <div className="flex items-start gap-3">
                     {course.courseThumbnail && (
-                      <img 
-                        src={course.courseThumbnail} 
+                      <img
+                        src={course.courseThumbnail}
                         alt={course.courseTitle}
                         className="w-16 h-16 rounded-lg object-cover"
                       />
@@ -230,8 +229,8 @@ const Dashboard = () => {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           {item.courseThumbnail && (
-                            <img 
-                              src={item.courseThumbnail} 
+                            <img
+                              src={item.courseThumbnail}
                               alt={item.courseTitle}
                               className="w-10 h-10 rounded object-cover hidden md:block"
                             />

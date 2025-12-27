@@ -222,7 +222,7 @@ const CourseDetailPage = () => {
               </svg>
             </button>
           </div>
-          <p className='pt-2 md:text-base text-sm text-gray-600 leading-relaxed' dangerouslySetInnerHTML={{ __html: courseData.courseDescription?.slice(0, 200) || '' }}></p>
+
 
           {/*reviews*/}
           <div className="mt-6">
@@ -374,10 +374,10 @@ const CourseDetailPage = () => {
                 onClick={handleEnrollNow}
                 disabled={isPurchasing || _isAlreadyEnrolled}
                 className={`w-full py-3 px-4 rounded-lg font-semibold transition-colors shadow-md ${isPurchasing
-                    ? 'bg-gray-400 cursor-not-allowed text-white'
-                    : _isAlreadyEnrolled
-                      ? 'bg-green-600 cursor-not-allowed text-white'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  ? 'bg-gray-400 cursor-not-allowed text-white'
+                  : _isAlreadyEnrolled
+                    ? 'bg-green-600 cursor-not-allowed text-white'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
                   }`}
               >
                 {isPurchasing ? 'Processing...' : _isAlreadyEnrolled ? 'Already Enrolled' : 'Enroll Now'}

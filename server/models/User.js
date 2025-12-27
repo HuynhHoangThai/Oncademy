@@ -11,6 +11,12 @@ const userSchema = new mongoose.Schema({
             ref: 'Course'
         }
     ],
+    enrolledPathways: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'PathwayCourse'
+        }
+    ],
     createdCourses: [
         {
             type: mongoose.Schema.Types.ObjectId,
@@ -32,7 +38,11 @@ const userSchema = new mongoose.Schema({
         default: null
     },
     favoriteCourses: [{
-        type: String, 
+        type: String,
+        required: false
+    }],
+    favoritePathways: [{
+        type: String,
         required: false
     }],
     rejectionReason: {

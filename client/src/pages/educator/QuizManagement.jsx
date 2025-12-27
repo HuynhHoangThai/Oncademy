@@ -27,7 +27,7 @@ const QuizManagement = () => {
   const fetchCoursesAndQuizzes = async () => {
     try {
       const token = await getToken();
-      
+
       // Fetch educator's courses
       const { data: coursesData } = await axios.get(`${backendUrl}/api/educator/courses`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -35,7 +35,7 @@ const QuizManagement = () => {
 
       if (coursesData.success) {
         setCourses(coursesData.courses || []);
-        
+
         // Fetch all quizzes for all courses
         const allQuizzes = [];
         for (const course of coursesData.courses || []) {
@@ -227,11 +227,10 @@ const QuizManagement = () => {
               <div className="flex bg-gray-100 rounded-lg p-1">
                 <button
                   onClick={() => setViewMode('grouped')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    viewMode === 'grouped'
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${viewMode === 'grouped'
                       ? 'bg-white text-blue-600 shadow-sm'
                       : 'text-gray-600 hover:text-gray-800'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -242,11 +241,10 @@ const QuizManagement = () => {
                 </button>
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    viewMode === 'list'
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${viewMode === 'list'
                       ? 'bg-white text-blue-600 shadow-sm'
                       : 'text-gray-600 hover:text-gray-800'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -257,7 +255,7 @@ const QuizManagement = () => {
                 </button>
               </div>
             </div>
-            
+
             {viewMode === 'grouped' && (
               <div className="flex gap-2">
                 <button
@@ -298,7 +296,7 @@ const QuizManagement = () => {
             {groupedQuizzes.map((course) => {
               const isExpanded = expandedCourses.has(course._id);
               const courseQuizzes = course.quizzes;
-              
+
               return (
                 <div key={course._id} className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
                   {/* Course Header */}
@@ -315,7 +313,7 @@ const QuizManagement = () => {
                       <div className="text-left">
                         <h3 className="text-lg font-bold text-gray-800">{course.courseTitle}</h3>
                         <p className="text-sm text-gray-600 mt-1">
-                          {courseQuizzes.length} quiz{courseQuizzes.length !== 1 ? 'zes' : ''} • 
+                          {courseQuizzes.length} quiz{courseQuizzes.length !== 1 ? 'zes' : ''} •
                           {courseQuizzes.filter(q => q.isPublished).length} published
                         </p>
                       </div>
@@ -376,11 +374,10 @@ const QuizManagement = () => {
                                     </div>
                                   </td>
                                   <td className="px-4 py-4 text-center hidden md:table-cell">
-                                    <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
-                                      quiz.quizType === 'final-exam' ? 'bg-red-100 text-red-700' :
-                                      quiz.quizType === 'assignment' ? 'bg-yellow-100 text-yellow-700' :
-                                      'bg-green-100 text-green-700'
-                                    }`}>
+                                    <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${quiz.quizType === 'final-exam' ? 'bg-red-100 text-red-700' :
+                                        quiz.quizType === 'assignment' ? 'bg-yellow-100 text-yellow-700' :
+                                          'bg-green-100 text-green-700'
+                                      }`}>
                                       {quiz.quizType}
                                     </span>
                                   </td>
@@ -393,11 +390,10 @@ const QuizManagement = () => {
                                   <td className="px-4 py-4 text-center">
                                     <button
                                       onClick={() => handleTogglePublish(quiz._id)}
-                                      className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                                        quiz.isPublished
+                                      className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold transition-colors ${quiz.isPublished
                                           ? 'bg-green-100 text-green-700 hover:bg-green-200'
                                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                      }`}
+                                        }`}
                                     >
                                       {quiz.isPublished ? 'Published' : 'Draft'}
                                     </button>
@@ -474,11 +470,10 @@ const QuizManagement = () => {
                         <p className="text-sm text-gray-700">{quiz.courseName || 'N/A'}</p>
                       </td>
                       <td className="px-4 py-3 text-center hidden md:table-cell">
-                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
-                          quiz.quizType === 'final-exam' ? 'bg-red-100 text-red-700' :
-                          quiz.quizType === 'assignment' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-green-100 text-green-700'
-                        }`}>
+                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${quiz.quizType === 'final-exam' ? 'bg-red-100 text-red-700' :
+                            quiz.quizType === 'assignment' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-green-100 text-green-700'
+                          }`}>
                           {quiz.quizType}
                         </span>
                       </td>
@@ -491,11 +486,10 @@ const QuizManagement = () => {
                       <td className="px-4 py-3 text-center">
                         <button
                           onClick={() => handleTogglePublish(quiz._id)}
-                          className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                            quiz.isPublished
+                          className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold transition-colors ${quiz.isPublished
                               ? 'bg-green-100 text-green-700 hover:bg-green-200'
                               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
+                            }`}
                         >
                           {quiz.isPublished ? 'Published' : 'Draft'}
                         </button>
@@ -582,9 +576,8 @@ const QuizManagement = () => {
                 <button
                   onClick={handleCreateManual}
                   disabled={!selectedCourse}
-                  className={`group relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl p-6 transition-all duration-300 transform hover:scale-105 shadow-lg ${
-                    !selectedCourse ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
+                  className={`group relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl p-6 transition-all duration-300 transform hover:scale-105 shadow-lg ${!selectedCourse ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
                 >
                   <div className="flex flex-col items-center gap-4">
                     <div className="p-4 bg-white bg-opacity-20 rounded-full">
@@ -600,9 +593,8 @@ const QuizManagement = () => {
                 </button>
 
                 {/* Excel Upload */}
-                <div className={`group relative overflow-hidden bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl p-6 transition-all duration-300 shadow-lg ${
-                  !selectedCourse ? 'opacity-50 cursor-not-allowed' : ''
-                }`}>
+                <div className={`group relative overflow-hidden bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl p-6 transition-all duration-300 shadow-lg ${!selectedCourse ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}>
                   <label className={`flex flex-col items-center gap-4 h-full ${selectedCourse ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
                     <div className="p-4 bg-white bg-opacity-20 rounded-full">
                       <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">

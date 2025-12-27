@@ -1,11 +1,13 @@
 import { useContext } from 'react';
 import { AppContext } from '../../context/AppContext';
 import CourseCard from '../../components/students/CourseCard';
+import PathwayCard from '../../components/students/PathwayCard';
 import { Link } from 'react-router-dom';
 
 const Favorites = () => {
-  const { allCourses, favoriteCourses } = useContext(AppContext);
+  const { allCourses, favoriteCourses, allPathways, favoritePathways } = useContext(AppContext);
   const favoriteList = allCourses.filter(course => favoriteCourses.includes(course._id));
+  const favoritePathwayList = allPathways ? allPathways.filter(pathway => favoritePathways && favoritePathways.includes(pathway._id)) : [];
 
   return (
     <>
@@ -19,7 +21,7 @@ const Favorites = () => {
       <div className="min-h-screen bg-gray-50 -mt-4">
         <div className="max-w-7xl mx-auto py-10 px-4">
 
-          {favoriteList.length === 0 ? (
+          {(favoriteList.length === 0 && favoritePathwayList.length === 0) ? (
             <div className="text-center py-16">
               <div className="mb-6">
                 <svg className="mx-auto h-24 w-24 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -38,11 +40,16 @@ const Favorites = () => {
           ) : (
             <>
               <div className="mb-6">
-                <p className="text-gray-600">{favoriteList.length} course{favoriteList.length !== 1 ? 's' : ''} in your favorites</p>
+                <p className="text-gray-600">
+                  {favoriteList.length + favoritePathwayList.length} item{(favoriteList.length + favoritePathwayList.length) !== 1 ? 's' : ''} in your favorites
+                </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {favoriteList.map(course => (
                   <CourseCard key={course._id} course={course} />
+                ))}
+                {favoritePathwayList.map(pathway => (
+                  <PathwayCard key={pathway._id} pathway={pathway} />
                 ))}
               </div>
             </>

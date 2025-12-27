@@ -1,5 +1,5 @@
 import express from 'express';
-import { approveCourse, approveEducator, demoteEducator, getAdminDashboardStats, getPendingCourses, getPendingEducatorApplications, getRevenueTrend, getUserDetails, getUsersListByRole, rejectCourse, rejectEducator, toggleBanUser } from '../controllers/adminController.js';
+import { approveCourse, approveEducator, approvePathway, demoteEducator, getAdminDashboardStats, getPendingCourses, getPendingEducatorApplications, getPendingPathways, getRevenueTrend, getUserDetails, getUsersListByRole, rejectCourse, rejectEducator, rejectPathway, toggleBanUser } from '../controllers/adminController.js';
 
 const router = express.Router();
 
@@ -15,5 +15,9 @@ router.post('/reject-educator', rejectEducator);
 router.get('/courses/pending', getPendingCourses);
 router.post('/courses/approve', approveCourse);
 router.post('/courses/reject', rejectCourse);
+// Pathway approval routes
+router.get('/pathways/pending', getPendingPathways);
+router.post('/pathways/approve', approvePathway);
+router.post('/pathways/reject', rejectPathway);
 
 export default router;

@@ -1,4 +1,4 @@
-import React, {useEffect, useRef,useState} from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import Uniqid from 'uniqid'
 import Quill from 'quill'
 import 'quill/dist/quill.snow.css';
@@ -45,7 +45,7 @@ const AddCourse = () => {
       );
     }
   };
-  
+
   const addChapter = () => {
     if (chapterTitle.trim()) {
       const newChapter = {
@@ -60,7 +60,7 @@ const AddCourse = () => {
       setChapterTitle('');
     }
   };
-    const handleLecture = (action, chapterId, lectureIndex) => {
+  const handleLecture = (action, chapterId, lectureIndex) => {
     if (action === 'add') {
       setCurrentChapterId(chapterId);
       setShowPopup(true);
@@ -75,7 +75,7 @@ const AddCourse = () => {
       );
     }
   };
-    const addLecture = () => {
+  const addLecture = () => {
     setChapters(
       chapters.map((chapter) => {
         if (chapter.chapterId === currentChapterId) {
@@ -101,7 +101,7 @@ const AddCourse = () => {
     e.preventDefault();
     if (!courseTitle) return toast.error('Please provide a course title')
     setSaving(true);
-    
+
     try {
       const token = await getToken()
 
@@ -146,10 +146,10 @@ const AddCourse = () => {
     } finally {
       setSaving(false);
     }
-    
+
   }
- useEffect(() => {
-    
+  useEffect(() => {
+
     if (!quillRef.current && editorRef.current) {
       quillRef.current = new Quill(editorRef.current, {
         theme: 'snow',
@@ -162,7 +162,25 @@ const AddCourse = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex flex-col items-center py-10 px-2">
       <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-8 flex flex-col gap-8">
-        <h1 className="text-3xl font-bold text-blue-700 mb-2 text-center">Create a New Course</h1>
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-blue-700 mb-2">Create a New Course</h1>
+          <p className="text-gray-600 text-sm mb-4">Create individual courses or build comprehensive learning pathways</p>
+
+          {/* Combo Option */}
+          <div className="inline-flex items-center gap-3 p-3 bg-gradient-to-r from-teal-100 to-emerald-100 border-2 border-teal-300 rounded-lg">
+            <svg className="w-5 h-5 text-teal-600" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+            </svg>
+            <span className="text-gray-700 font-medium">Want to create a Course Combo?</span>
+            <button
+              type="button"
+              onClick={() => navigate('/educator/add-pathway')}
+              className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white px-4 py-1.5 rounded-lg font-semibold text-sm shadow transition"
+            >
+              Create
+            </button>
+          </div>
+        </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
           {/* Course Title */}
           <div>
@@ -172,7 +190,7 @@ const AddCourse = () => {
           {/* Course Description */}
           <div>
             <label className="block text-gray-700 font-semibold mb-1">Course Description</label>
-            <div ref={editorRef} className="quill-fix bg-gray-50 rounded-lg border border-gray-200 min-h-[120px]" style={{minHeight:180}} />
+            <div ref={editorRef} className="quill-fix bg-gray-50 rounded-lg border border-gray-200 min-h-[120px]" style={{ minHeight: 180 }} />
           </div>
           {/* Price & Thumbnail */}
           <div className="flex flex-col md:flex-row gap-6">
@@ -263,10 +281,10 @@ const AddCourse = () => {
             <div className="space-y-3">
               <div>
                 <label className="block text-gray-700 font-semibold mb-1">Chapter Name</label>
-                <input 
-                  type="text" 
-                  className="block w-full border rounded py-2 px-3 outline-none focus:border-blue-400" 
-                  value={chapterTitle} 
+                <input
+                  type="text"
+                  className="block w-full border rounded py-2 px-3 outline-none focus:border-blue-400"
+                  value={chapterTitle}
                   onChange={e => setChapterTitle(e.target.value)}
                   onKeyPress={e => e.key === 'Enter' && addChapter()}
                   placeholder="Enter chapter name"
@@ -274,14 +292,14 @@ const AddCourse = () => {
                 />
               </div>
               <div className="flex gap-2">
-                <button 
-                  onClick={addChapter} 
+                <button
+                  onClick={addChapter}
                   disabled={!chapterTitle.trim()}
                   className="flex-1 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold text-lg transition"
                 >
                   Add Chapter
                 </button>
-                <button 
+                <button
                   onClick={() => { setShowChapterDialog(false); setChapterTitle(''); }}
                   className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold transition"
                 >
@@ -316,7 +334,13 @@ const AddCourse = () => {
                 <input type="checkbox" id="isPreviewFree" checked={lectureDetails.isPreviewFree} onChange={e => setLectureDetails({ ...lectureDetails, isPreviewFree: e.target.checked })} />
                 <label htmlFor="isPreviewFree" className="text-gray-700">Free Preview</label>
               </div>
-              <button onClick={addLecture} className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg mt-2">Add Lecture</button>
+              <button
+                onClick={addLecture}
+                disabled={!lectureDetails.lectureTitle.trim() || !lectureDetails.lectureUrl.trim() || !lectureDetails.lectureDuration}
+                className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold text-lg mt-2"
+              >
+                Add Lecture
+              </button>
             </div>
           </div>
         </div>

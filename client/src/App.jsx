@@ -24,6 +24,8 @@ const ViewHistory = lazy(() => import('./pages/students/ViewHistory'))
 const QuizTaking = lazy(() => import('./pages/students/QuizTaking'))
 const QuizResult = lazy(() => import('./pages/students/QuizResult'))
 const MyQuizResults = lazy(() => import('./pages/students/MyQuizResults'))
+const PathwayDetailPage = lazy(() => import('./pages/students/PathwayDetailPage'))
+const PathwayPlayer = lazy(() => import('./pages/students/PathwayPlayer'))
 
 // Educator pages
 const Educator = lazy(() => import('./pages/educator/Educator'))
@@ -36,9 +38,11 @@ const QuizSubmissions = lazy(() => import('./pages/educator/QuizSubmissions'))
 const GradeQuiz = lazy(() => import('./pages/educator/GradeQuiz'))
 const StudentsEnrolled = lazy(() => import('./pages/educator/StudentsEnrolled'))
 const MyCourses = lazy(() => import('./pages/educator/MyCourses'))
+const AddPathway = lazy(() => import('./pages/educator/AddPathway'))
+const EditPathway = lazy(() => import('./pages/educator/EditPathway'))
 
 // Admin pages
-const AdminLayout = lazy(() => import('./pages/admin/AdminLayout')) 
+const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'))
 // const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
 const PendingApplications = lazy(() => import('./pages/admin/PendingApplications'))
 const ManageUsers = lazy(() => import('./pages/admin/ManageUsers'))
@@ -67,10 +71,14 @@ const App = () => {
             <Route path='/quiz/:quizId' element={<QuizTaking />} />
             <Route path='/quiz/:quizId/result/:attemptId' element={<QuizResult />} />
             <Route path='/my-quiz-results' element={<MyQuizResults />} />
+            <Route path='/pathway/:id' element={<PathwayDetailPage />} />
+            <Route path='/pathway-player/:id' element={<PathwayPlayer />} />
             <Route path='/loading/:path' element={<Loading />} />
             <Route path='/educator' element={<Educator />}>
               <Route index element={<Dashboard />} />
               <Route path='add-course' element={<AddCourse />} />
+              <Route path='add-pathway' element={<AddPathway />} />
+              <Route path='edit-pathway/:id' element={<EditPathway />} />
               <Route path='edit-course/:id' element={<EditCourse />} />
               <Route path='my-courses' element={<MyCourses />} />
               <Route path='quizzes' element={<QuizManagement />} />
@@ -81,7 +89,7 @@ const App = () => {
               <Route path='students-enrolled' element={<StudentsEnrolled />} />
               <Route path='students-enrolled/:courseId' element={<StudentsEnrolled />} />
             </Route>
-            <Route path='/admin' element={<AdminLayout />}> 
+            <Route path='/admin' element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
               <Route path='applications' element={<PendingApplications />} />
               <Route path='courses/pending' element={<PendingCourses />} />

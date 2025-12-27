@@ -70,7 +70,7 @@ const QuizBuilder = () => {
   const fetchQuizData = async () => {
     try {
       const token = await getToken();
-      
+
       // Fetch quiz data
       const { data: quizResponse } = await axios.get(`${backendUrl}/api/quiz/${quizId}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -78,7 +78,7 @@ const QuizBuilder = () => {
 
       if (quizResponse.success) {
         const quiz = quizResponse.quiz;
-        
+
         // Fetch course data
         const { data: courseResponse } = await axios.get(`${backendUrl}/api/course/${quiz.courseId}`, {
           headers: { Authorization: `Bearer ${token}` }
@@ -197,7 +197,7 @@ const QuizBuilder = () => {
       ...prev,
       questions: [...prev.questions, newQuestion]
     }));
-    
+
     // Scroll to the new question after a short delay
     setTimeout(() => {
       const questionElements = document.querySelectorAll('[data-question-card]');
@@ -218,7 +218,7 @@ const QuizBuilder = () => {
   const updateQuestion = (questionId, field, value) => {
     setQuizData(prev => ({
       ...prev,
-      questions: prev.questions.map(q => 
+      questions: prev.questions.map(q =>
         q.id === questionId ? { ...q, [field]: value } : q
       )
     }));
@@ -227,8 +227,8 @@ const QuizBuilder = () => {
   const updateOption = (questionId, optionIndex, value) => {
     setQuizData(prev => ({
       ...prev,
-      questions: prev.questions.map(q => 
-        q.id === questionId 
+      questions: prev.questions.map(q =>
+        q.id === questionId
           ? { ...q, options: q.options.map((opt, i) => i === optionIndex ? value : opt) }
           : q
       )
@@ -283,7 +283,7 @@ const QuizBuilder = () => {
 
     try {
       const token = await getToken();
-      
+
       // Transform questions back to database format
       const transformedQuestions = quizData.questions.map((q, index) => {
         const baseQuestion = {
@@ -326,16 +326,16 @@ const QuizBuilder = () => {
         courseId: isEditMode ? course._id : courseId,
         chapterId: selectedChapter || undefined,
         lectureId: selectedLecture || undefined,
-        attemptsAllowed: quizData.maxAttempts, 
+        attemptsAllowed: quizData.maxAttempts,
         deadline: deadline ? deadline.toISOString() : null,
         totalPoints: transformedQuestions.reduce((sum, q) => sum + q.points, 0),
         questions: transformedQuestions
       };
 
-      const url = isEditMode 
+      const url = isEditMode
         ? `${backendUrl}/api/quiz/${quizId}`
         : `${backendUrl}/api/quiz/create`;
-      
+
       const method = isEditMode ? 'put' : 'post';
 
       const { data } = await axios[method](
@@ -381,60 +381,12 @@ const QuizBuilder = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Chapter & Lecture Selection */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Quiz Location (Optional)</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Select a specific chapter or lecture for this quiz, or leave empty for course-level quiz
-            </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Chapter</label>
-                <select
-                  value={selectedChapter}
-                  onChange={(e) => {
-                    setSelectedChapter(e.target.value);
-                    setSelectedLecture(''); 
-                  }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">-- Select Chapter (Optional) --</option>
-                  {course?.courseContent?.map((chapter) => (
-                    <option key={chapter.chapterId} value={chapter.chapterId}>
-                      {chapter.chapterTitle}
-                    </option>
-                  ))}
-                </select>
-              </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Lecture</label>
-                <select
-                  value={selectedLecture}
-                  onChange={(e) => setSelectedLecture(e.target.value)}
-                  disabled={!selectedChapter}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-                >
-                  <option value="">-- Select Lecture (Optional) --</option>
-                  {selectedChapter && 
-                    course?.courseContent
-                      ?.find(ch => ch.chapterId === selectedChapter)
-                      ?.chapterContent?.map((lecture) => (
-                        <option key={lecture.lectureId} value={lecture.lectureId}>
-                          {lecture.lectureTitle}
-                        </option>
-                      ))
-                  }
-                </select>
-              </div>
-            </div>
-          </div>
 
           {/* Quiz Settings Card */}
           <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Quiz Settings</h2>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -532,7 +484,7 @@ const QuizBuilder = () => {
 
                         sx: {
                           '& .MuiInputBase-root': {
-                            borderRadius: '0.5rem', 
+                            borderRadius: '0.5rem',
                             padding: '0',
                             height: 'auto',
                           },
@@ -544,11 +496,11 @@ const QuizBuilder = () => {
                             borderWidth: '2px !important',
                           },
                           '& .MuiInputBase-input': {
-                            padding: '8px 16px !important', 
+                            padding: '8px 16px !important',
                             height: 'auto',
                           },
                           '& .MuiInputLabel-root': {
-                            color: '#4b5563', 
+                            color: '#4b5563',
                           }
                         }
                       },
