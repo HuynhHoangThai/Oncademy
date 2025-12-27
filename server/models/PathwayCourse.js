@@ -65,6 +65,14 @@ const pathwayCourseSchema = new mongoose.Schema({
             ref: 'User'
         }
     ],
+    documents: [
+        {
+            documentId: { type: String, required: true },
+            documentTitle: { type: String, required: true },
+            documentUrl: { type: String, required: true },
+            uploadedAt: { type: Date, default: Date.now }
+        }
+    ],
 }, { timestamps: true, minimize: false });
 
 // Add indexes for better query performance

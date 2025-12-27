@@ -475,3 +475,126 @@ export const purchasePathway = async (req, res) => {
         res.json({ success: false, message: error.message });
     }
 };
+
+// Upload Pathway Document (Educator only)
+export const uploadPathwayDocument = async (req, res) => {
+    const { pathwayId } = req.params;
+    const educatorId = getUserId(req);
+    const file = req.file;
+
+    try {
+        if (!file) {
+            return res.json({ success: false, message: 'No file provided' });
+        }
+
+        const pathway = await PathwayCourse.findById(pathwayId);
+
+        if (!pathway) {
+            return res.json({ success: false, message: 'Pathway not found' });
+        }
+
+        if (pathway.educator.toString() !== educatorId) {
+            return res.json({ success: false, message: 'Unauthorized - You can only upload to your own pathways' });
+        }
+
+        const b64 = Buffer.from(file.buffer).toString('base64');
+        const dataURI = `data:${file.mimetype};base64,${b64}`;
+
+        const uploadResult = await cloudinary.uploader.upload(dataURI, {
+            resource_type: 'raw',
+            folder: 'pathway_documents',
+            format: 'pdf'
+        });
+
+        const newDocument = {
+            documentId: `doc_${Date.now()}`,
+            documentTitle: req.body.documentTitle || file.originalname,
+            documentUrl: uploadResult.secure_url,
+            uploadedAt: new Date()
+        };
+
+        pathway.documents.push(newDocument);
+        await pathway.save();
+
+        res.json({
+            success: true,
+            message: 'Document uploaded successfully',
+            document: newDocument
+        });
+
+    } catch (error) {
+        console.error('Error uploading pathway document:', error);
+        res.json({ success: false, message: error.message });
+    }
+};
+
+// Get Pathway Documents
+export const getPathwayDocuments = async (req, res) => {
+    const { pathwayId } = req.params;
+    const userId = getUserId(req);
+
+    try {
+        const pathway = await PathwayCourse.findById(pathwayId).select('documents enrolledStudents educator');
+
+        if (!pathway) {
+            return res.json({ success: false, message: 'Pathway not found' });
+        }
+
+        const isEnrolled = pathway.enrolledStudents.includes(userId);
+        const isEducator = pathway.educator.toString() === userId;
+
+        if (!isEnrolled && !isEducator) {
+            return res.json({ success: false, message: 'You must be enrolled to access documents' });
+        }
+
+        res.json({
+            success: true,
+            documents: pathway.documents || []
+        });
+
+    } catch (error) {
+        console.error('Error fetching pathway documents:', error);
+        res.json({ success: false, message: error.message });
+    }
+};
+
+// Delete Pathway Document (Educator only)
+export const deletePathwayDocument = async (req, res) => {
+    const { pathwayId, documentId } = req.params;
+    const educatorId = getUserId(req);
+
+    try {
+        const pathway = await PathwayCourse.findById(pathwayId);
+
+        if (!pathway) {
+            return res.json({ success: false, message: 'Pathway not found' });
+        }
+
+        if (pathway.educator.toString() !== educatorId) {
+            return res.json({ success: false, message: 'Unauthorized' });
+        }
+
+        const docIndex = pathway.documents.findIndex(doc => doc.documentId === documentId);
+
+        if (docIndex === -1) {
+            return res.json({ success: false, message: 'Document not found' });
+        }
+
+        try {
+            const docUrl = pathway.documents[docIndex].documentUrl;
+            const publicId = docUrl.split('/').slice(-2).join('/').split('.')[0];
+            await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
+        } catch (err) {
+            console.error('Error deleting from cloudinary:', err);
+        }
+
+        pathway.documents.splice(docIndex, 1);
+        await pathway.save();
+
+        res.json({ success: true, message: 'Document deleted successfully' });
+
+    } catch (error) {
+        console.error('Error deleting pathway document:', error);
+        res.json({ success: false, message: error.message });
+    }
+};

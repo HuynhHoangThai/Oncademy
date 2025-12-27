@@ -210,3 +210,134 @@ export const updateCourse = async (req, res) => {
         res.json({ success: false, message: error.message })
     }
 }
+
+// Upload Course Document (Educator only)
+export const uploadCourseDocument = async (req, res) => {
+    const { courseId } = req.params;
+    const educatorId = getUserId(req);
+    const file = req.file;
+
+    try {
+        if (!file) {
+            return res.json({ success: false, message: 'No file provided' });
+        }
+
+        // Find course and verify ownership
+        const course = await Course.findById(courseId);
+
+        if (!course) {
+            return res.json({ success: false, message: 'Course not found' });
+        }
+
+        if (course.educator.toString() !== educatorId) {
+            return res.json({ success: false, message: 'Unauthorized - You can only upload to your own courses' });
+        }
+
+        // Upload PDF to cloudinary
+        const b64 = Buffer.from(file.buffer).toString('base64');
+        const dataURI = `data:${file.mimetype};base64,${b64}`;
+
+        const uploadResult = await cloudinary.uploader.upload(dataURI, {
+            resource_type: 'raw',
+            folder: 'course_documents',
+            format: 'pdf'
+        });
+
+        // Create document object
+        const newDocument = {
+            documentId: `doc_${Date.now()}`,
+            documentTitle: req.body.documentTitle || file.originalname,
+            documentUrl: uploadResult.secure_url,
+            uploadedAt: new Date()
+        };
+
+        // Add to course documents
+        course.documents.push(newDocument);
+        await course.save();
+
+        res.json({
+            success: true,
+            message: 'Document uploaded successfully',
+            document: newDocument
+        });
+
+    } catch (error) {
+        console.error('Error uploading document:', error);
+        res.json({ success: false, message: error.message });
+    }
+};
+
+// Get Course Documents (for enrolled students)
+export const getCourseDocuments = async (req, res) => {
+    const { courseId } = req.params;
+    const userId = getUserId(req);
+
+    try {
+        const course = await Course.findById(courseId).select('documents enrolledStudents educator');
+
+        if (!course) {
+            return res.json({ success: false, message: 'Course not found' });
+        }
+
+        // Check if user is enrolled or is the educator
+        const isEnrolled = course.enrolledStudents.includes(userId);
+        const isEducator = course.educator.toString() === userId;
+
+        if (!isEnrolled && !isEducator) {
+            return res.json({ success: false, message: 'You must be enrolled to access documents' });
+        }
+
+        res.json({
+            success: true,
+            documents: course.documents || []
+        });
+
+    } catch (error) {
+        console.error('Error fetching documents:', error);
+        res.json({ success: false, message: error.message });
+    }
+};
+
+// Delete Course Document (Educator only)
+export const deleteCourseDocument = async (req, res) => {
+    const { courseId, documentId } = req.params;
+    const educatorId = getUserId(req);
+
+    try {
+        const course = await Course.findById(courseId);
+
+        if (!course) {
+            return res.json({ success: false, message: 'Course not found' });
+        }
+
+        if (course.educator.toString() !== educatorId) {
+            return res.json({ success: false, message: 'Unauthorized - You can only delete from your own courses' });
+        }
+
+        // Find and remove document
+        const docIndex = course.documents.findIndex(doc => doc.documentId === documentId);
+
+        if (docIndex === -1) {
+            return res.json({ success: false, message: 'Document not found' });
+        }
+
+        // Remove from cloudinary (optional - extract public_id)
+        const docUrl = course.documents[docIndex].documentUrl;
+        try {
+            const publicId = docUrl.split('/').slice(-2).join('/').split('.')[0];
+            await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
+        } catch (err) {
+            console.error('Error deleting from cloudinary:', err);
+        }
+
+        // Remove from course
+        course.documents.splice(docIndex, 1);
+        await course.save();
+
+        res.json({ success: true, message: 'Document deleted successfully' });
+
+    } catch (error) {
+        console.error('Error deleting document:', error);
+        res.json({ success: false, message: error.message });
+    }
+};

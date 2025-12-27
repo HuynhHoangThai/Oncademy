@@ -8,9 +8,12 @@ import {
     updatePathway,
     deletePathway,
     togglePublishPathway,
-    purchasePathway
+    purchasePathway,
+    uploadPathwayDocument,
+    getPathwayDocuments,
+    deletePathwayDocument
 } from '../controllers/pathwayController.js';
-import { protectEducator } from '../middlewares/authMiddleware.js';
+import { protectEducator, protectRoute } from '../middlewares/authMiddleware.js';
 import upload from '../configs/multer.js';
 
 const pathwayRouter = express.Router();
@@ -27,5 +30,10 @@ pathwayRouter.get('/educator/edit/:id', protectEducator, getPathwayForEdit); // 
 pathwayRouter.put('/:id', upload.single('image'), protectEducator, updatePathway);
 pathwayRouter.delete('/:id', protectEducator, deletePathway);
 pathwayRouter.post('/toggle-publish', protectEducator, togglePublishPathway);
+
+// Pathway Document routes
+pathwayRouter.post('/:pathwayId/documents', upload.single('document'), protectEducator, uploadPathwayDocument);
+pathwayRouter.get('/:pathwayId/documents', protectRoute, getPathwayDocuments);
+pathwayRouter.delete('/:pathwayId/documents/:documentId', protectEducator, deletePathwayDocument);
 
 export default pathwayRouter;

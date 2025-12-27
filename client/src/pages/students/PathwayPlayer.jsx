@@ -30,12 +30,30 @@ const PathwayPlayer = () => {
     const [playerData, setPlayerData] = useState(null);
     const [quizzes, setQuizzes] = useState([]);
     const [quizzesExpanded, setQuizzesExpanded] = useState(false);
+    const [documents, setDocuments] = useState([]);
+    const [documentsExpanded, setDocumentsExpanded] = useState(false);
 
     // Manage expanded states
     const [expandedPhases, setExpandedPhases] = useState(new Set([0]));
     const [expandedChapters, setExpandedChapters] = useState(new Set());
     const [completedLectures, setCompletedLectures] = useState(new Set());
     const [isMarkingComplete, setIsMarkingComplete] = useState(false);
+
+    // Fetch Documents for Pathway
+    const fetchDocuments = async () => {
+        try {
+            const token = await getToken();
+            const { data } = await axios.get(`${backendUrl}/api/pathway/${id}/documents`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (data.success) {
+                setDocuments(data.documents || []);
+            }
+        } catch (error) {
+            console.error('Fetch documents error:', error);
+            setDocuments([]);
+        }
+    };
 
     // Fetch Quizzes for Pathway
     const fetchQuizzes = async () => {
@@ -71,6 +89,7 @@ const PathwayPlayer = () => {
         if (pathway) { // Only fetch progress after pathway is loaded or if we have ID. actually ID is enough.
             fetchProgress();
             fetchQuizzes();
+            fetchDocuments();
         }
     }, [id, getToken, pathway]); // Added pathway dependency to ensure we fetch after initial load if needed, but ID is stable.
 
@@ -423,6 +442,51 @@ const PathwayPlayer = () => {
                                                             </button>
                                                         </div>
                                                     </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Documents Section */}
+                            {documents.length > 0 && (
+                                <div className="border border-green-300 bg-green-50 mb-2 rounded mt-4">
+                                    <div
+                                        className="flex items-center justify-between px-4 py-3 cursor-pointer select-none"
+                                        onClick={() => setDocumentsExpanded(!documentsExpanded)}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <img
+                                                className={`transform transition-transform ${documentsExpanded ? "rotate-180" : ""}`}
+                                                src={assets.down_arrow_icon}
+                                                alt="arrow icon"
+                                            />
+                                            <p className="font-medium md:text-base text-sm text-green-700">Course Documents</p>
+                                        </div>
+                                        <p className="text-sm md:text-default text-green-600">{documents.length} document{documents.length !== 1 ? 's' : ''}</p>
+                                    </div>
+                                    <div className={`overflow-hidden transition-all duration-300 ${documentsExpanded ? "max-h-96 overflow-y-auto" : "max-h-0"}`}>
+                                        <ul className="md:pl-10 pl-4 pr-4 py-2 border-t border-green-200">
+                                            {documents.map((doc) => (
+                                                <li key={doc.documentId} className="flex items-center justify-between gap-2 py-2 border-b border-green-100 last:border-b-0">
+                                                    <div className="flex items-center gap-3">
+                                                        <svg className="w-6 h-6 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM14 2v6h6M16 13H8M16 17H8M10 9H8" />
+                                                        </svg>
+                                                        <div>
+                                                            <p className="font-medium text-gray-800 text-sm md:text-base">{doc.documentTitle}</p>
+                                                            <p className="text-xs text-gray-500">{new Date(doc.uploadedAt).toLocaleDateString()}</p>
+                                                        </div>
+                                                    </div>
+                                                    <a
+                                                        href={doc.documentUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+                                                    >
+                                                        Download
+                                                    </a>
                                                 </li>
                                             ))}
                                         </ul>

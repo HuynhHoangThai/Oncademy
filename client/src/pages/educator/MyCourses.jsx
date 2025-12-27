@@ -49,6 +49,13 @@ const MyCourses = () => {
   })
   const [editingLectureIndex, setEditingLectureIndex] = useState(null)
   const [deletingLectureIndex, setDeletingLectureIndex] = useState(null)
+  // Document upload states
+  const [showDocsDialog, setShowDocsDialog] = useState(false)
+  const [selectedCourseForDocs, setSelectedCourseForDocs] = useState(null)
+  const [courseDocuments, setCourseDocuments] = useState([])
+  const [uploadingDoc, setUploadingDoc] = useState(false)
+  const [docTitle, setDocTitle] = useState('')
+  const [docFile, setDocFile] = useState(null)
   const currency = '$'
   const backendUrl = import.meta.env.VITE_BACKEND_URL
 
@@ -149,6 +156,176 @@ const MyCourses = () => {
   const closeDeleteDialog = () => {
     setShowDeleteDialog(false)
     setCourseToDelete(null)
+  }
+
+  // Open docs dialog
+  const openDocsDialog = async (course) => {
+    setSelectedCourseForDocs(course)
+    setShowDocsDialog(true)
+    setDocTitle('')
+    setDocFile(null)
+    // Fetch existing documents
+    try {
+      const token = await getToken()
+      const { data } = await axios.get(`${backendUrl}/api/educator/course/${course._id}/documents`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (data.success) {
+        setCourseDocuments(data.documents || [])
+      }
+    } catch (error) {
+      console.error('Error fetching documents:', error)
+      setCourseDocuments([])
+    }
+  }
+
+  // Close docs dialog
+  const closeDocsDialog = () => {
+    setShowDocsDialog(false)
+    setSelectedCourseForDocs(null)
+    setCourseDocuments([])
+    setDocTitle('')
+    setDocFile(null)
+  }
+
+  // Upload document
+  const handleUploadDocument = async () => {
+    if (!docFile) {
+      toast.error('Please select a PDF file')
+      return
+    }
+    if (!docTitle.trim()) {
+      toast.error('Please enter document title')
+      return
+    }
+
+    setUploadingDoc(true)
+    try {
+      const token = await getToken()
+      const formData = new FormData()
+      formData.append('document', docFile)
+      formData.append('documentTitle', docTitle)
+
+      const { data } = await axios.post(
+        `${backendUrl}/api/educator/course/${selectedCourseForDocs._id}/documents`,
+        formData,
+        { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } }
+      )
+
+      if (data.success) {
+        toast.success('Document uploaded successfully')
+        setCourseDocuments([...courseDocuments, data.document])
+        setDocTitle('')
+        setDocFile(null)
+      } else {
+        toast.error(data.message || 'Failed to upload document')
+      }
+    } catch (error) {
+      console.error('Error uploading document:', error)
+      toast.error('Failed to upload document')
+    } finally {
+      setUploadingDoc(false)
+    }
+  }
+
+  // Delete document
+  const handleDeleteDocument = async (documentId) => {
+    try {
+      const token = await getToken()
+      const { data } = await axios.delete(
+        `${backendUrl}/api/educator/course/${selectedCourseForDocs._id}/documents/${documentId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+
+      if (data.success) {
+        toast.success('Document deleted')
+        setCourseDocuments(courseDocuments.filter(d => d.documentId !== documentId))
+      } else {
+        toast.error(data.message || 'Failed to delete')
+      }
+    } catch (error) {
+      console.error('Error deleting document:', error)
+      toast.error('Failed to delete document')
+    }
+  }
+
+  // Pathway document functions
+  const openPathwayDocsDialog = async (pathway) => {
+    setSelectedCourseForDocs({ ...pathway, isPathway: true })
+    setShowDocsDialog(true)
+    setDocTitle('')
+    setDocFile(null)
+    try {
+      const token = await getToken()
+      const { data } = await axios.get(`${backendUrl}/api/pathway/${pathway._id}/documents`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (data.success) {
+        setCourseDocuments(data.documents || [])
+      }
+    } catch (error) {
+      console.error('Error fetching pathway documents:', error)
+      setCourseDocuments([])
+    }
+  }
+
+  const handleUploadPathwayDocument = async () => {
+    if (!docFile) {
+      toast.error('Please select a PDF file')
+      return
+    }
+    if (!docTitle.trim()) {
+      toast.error('Please enter document title')
+      return
+    }
+
+    setUploadingDoc(true)
+    try {
+      const token = await getToken()
+      const formData = new FormData()
+      formData.append('document', docFile)
+      formData.append('documentTitle', docTitle)
+
+      const { data } = await axios.post(
+        `${backendUrl}/api/pathway/${selectedCourseForDocs._id}/documents`,
+        formData,
+        { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } }
+      )
+
+      if (data.success) {
+        toast.success('Document uploaded successfully')
+        setCourseDocuments([...courseDocuments, data.document])
+        setDocTitle('')
+        setDocFile(null)
+      } else {
+        toast.error(data.message || 'Failed to upload document')
+      }
+    } catch (error) {
+      console.error('Error uploading document:', error)
+      toast.error('Failed to upload document')
+    } finally {
+      setUploadingDoc(false)
+    }
+  }
+
+  const handleDeletePathwayDocument = async (documentId) => {
+    try {
+      const token = await getToken()
+      const { data } = await axios.delete(
+        `${backendUrl}/api/pathway/${selectedCourseForDocs._id}/documents/${documentId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+
+      if (data.success) {
+        toast.success('Document deleted')
+        setCourseDocuments(courseDocuments.filter(d => d.documentId !== documentId))
+      } else {
+        toast.error(data.message || 'Failed to delete')
+      }
+    } catch (error) {
+      console.error('Error deleting document:', error)
+      toast.error('Failed to delete document')
+    }
   }
 
   // Delete course
@@ -660,6 +837,16 @@ const MyCourses = () => {
                               <span className="hidden sm:inline">Edit</span>
                             </button>
                             <button
+                              onClick={() => openDocsDialog(course)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 hover:bg-green-200 text-green-700 hover:text-green-800 rounded-lg font-medium transition-colors text-sm"
+                              title="Manage documents"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              <span className="hidden sm:inline">Docs</span>
+                            </button>
+                            <button
                               onClick={() => openDeleteDialog(course)}
                               className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 hover:text-red-800 rounded-lg font-medium transition-colors text-sm"
                               title="Delete course"
@@ -800,6 +987,16 @@ const MyCourses = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                               </svg>
                               <span className="hidden sm:inline">Edit</span>
+                            </button>
+                            <button
+                              onClick={() => openPathwayDocsDialog(pathway)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 hover:bg-green-200 text-green-700 hover:text-green-800 rounded-lg font-medium transition-colors text-sm"
+                              title="Manage documents"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              <span className="hidden sm:inline">Docs</span>
                             </button>
                             <button
                               onClick={() => handleDeletePathway(pathway)}
@@ -1614,6 +1811,103 @@ const MyCourses = () => {
               >
                 Delete Lecture
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Document Upload Dialog */}
+      {showDocsDialog && selectedCourseForDocs && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-600 to-teal-600">
+              <h2 className="text-xl font-bold text-white">Course Documents</h2>
+              <button onClick={closeDocsDialog} className="text-white hover:text-gray-200">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              <p className="text-sm text-gray-600 mb-4">
+                <strong>{selectedCourseForDocs.isPathway ? selectedCourseForDocs.pathwayTitle : selectedCourseForDocs.courseTitle}</strong>
+                {selectedCourseForDocs.isPathway && (
+                  <span className="ml-2 px-2 py-0.5 bg-teal-100 text-teal-700 text-xs font-medium rounded-full">Combo</span>
+                )}
+              </p>
+
+              {/* Upload Form */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <h3 className="font-semibold text-gray-700 mb-3">Upload New Document</h3>
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    placeholder="Document title"
+                    value={docTitle}
+                    onChange={(e) => setDocTitle(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={(e) => setDocFile(e.target.files[0])}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                  <button
+                    onClick={selectedCourseForDocs.isPathway ? handleUploadPathwayDocument : handleUploadDocument}
+                    disabled={uploadingDoc}
+                    className={`w-full px-4 py-2 rounded-lg font-medium transition-colors ${uploadingDoc
+                      ? 'bg-gray-400 cursor-not-allowed text-white'
+                      : 'bg-green-600 hover:bg-green-700 text-white'
+                      }`}
+                  >
+                    {uploadingDoc ? 'Uploading...' : 'Upload PDF'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Existing Documents */}
+              <div>
+                <h3 className="font-semibold text-gray-700 mb-3">Uploaded Documents ({courseDocuments.length})</h3>
+                {courseDocuments.length === 0 ? (
+                  <p className="text-gray-500 text-sm text-center py-4">No documents uploaded yet</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {courseDocuments.map((doc) => (
+                      <li key={doc.documentId} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
+                        <div className="flex items-center gap-3">
+                          <svg className="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM14 2v6h6M16 13H8M16 17H8M10 9H8" />
+                          </svg>
+                          <div>
+                            <p className="font-medium text-gray-800">{doc.documentTitle}</p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(doc.uploadedAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={doc.documentUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-sm font-medium"
+                          >
+                            View
+                          </a>
+                          <button
+                            onClick={() => selectedCourseForDocs.isPathway ? handleDeletePathwayDocument(doc.documentId) : handleDeleteDocument(doc.documentId)}
+                            className="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-sm font-medium"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           </div>
         </div>
