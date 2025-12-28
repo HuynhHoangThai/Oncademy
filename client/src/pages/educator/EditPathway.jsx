@@ -174,6 +174,7 @@ const EditPathway = () => {
                             chapterId: Uniqid(),
                             chapterTitle: chapterTitle.trim(),
                             chapterContent: [],
+                            chapterOrder: phase.chapters.length + 1,
                         };
                         phase.chapters.push(newChapter);
                     }
