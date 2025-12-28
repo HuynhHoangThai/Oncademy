@@ -89,6 +89,33 @@ export const getCourseId = async (req, res) => {
 
 }
 
+// Get course for edit (Educator only - includes all lectureUrls)
+export const getCourseForEdit = async (req, res) => {
+    const { id } = req.params
+    const educatorId = getUserId(req)
+
+    try {
+        const courseData = await Course.findById(id)
+            .populate({ path: 'educator' })
+
+        if (!courseData) {
+            return res.json({ success: false, message: 'Course not found' })
+        }
+
+        // Check ownership
+        if (courseData.educator._id.toString() !== educatorId) {
+            return res.json({ success: false, message: 'Unauthorized - You can only edit your own courses' })
+        }
+
+        // Return full data including all lectureUrls
+        res.json({ success: true, courseData })
+
+    } catch (error) {
+        res.json({ success: false, message: error.message })
+    }
+}
+
+
 // Delete Course (Educator only)
 export const deleteCourse = async (req, res) => {
     const { id } = req.params

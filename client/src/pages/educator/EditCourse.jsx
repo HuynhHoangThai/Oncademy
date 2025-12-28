@@ -51,7 +51,7 @@ const EditCourse = () => {
   const fetchCourse = async () => {
     try {
       const token = await getToken()
-      const { data } = await axios.get(`${backendUrl}/api/course/${id}`, {
+      const { data } = await axios.get(`${backendUrl}/api/course/educator/edit/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
 
