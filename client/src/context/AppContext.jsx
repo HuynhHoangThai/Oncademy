@@ -261,6 +261,24 @@ const AppProvider = (props) => {
         fetchAllPathways()
 
     }, [])
+
+    // Refresh data when returning from bfcache (e.g., browser back from Stripe)
+    useEffect(() => {
+        const handlePageShow = (event) => {
+            if (event.persisted) {
+                // Page was restored from bfcache, refresh all data
+                fetchAllCourses()
+                fetchAllPathways()
+                if (user) {
+                    fetchUserEnrolledCourses()
+                    fetchUserEnrolledPathways()
+                }
+            }
+        }
+
+        window.addEventListener('pageshow', handlePageShow)
+        return () => window.removeEventListener('pageshow', handlePageShow)
+    }, [user])
     useEffect(() => {
         if (user) {
             fetchUserData()
