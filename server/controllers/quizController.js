@@ -1157,7 +1157,7 @@ const getStudentQuizAttempts = async (req, res) => {
     const attempts = await QuizAttempt.find({
       quizId: { $in: quizIds },
       status: { $in: ['completed', 'graded'] }
-    }).populate('quizId', 'title courseId').lean();
+    }).populate('quizId', 'quizTitle courseId').lean();
 
     // Group attempts by student
     const studentAttemptsMap = {};
@@ -1178,7 +1178,7 @@ const getStudentQuizAttempts = async (req, res) => {
 
       studentAttemptsMap[studentId].attempts.push({
         attemptId: attempt._id,
-        quizTitle: attempt.quizId?.title || 'Unknown Quiz',
+        quizTitle: attempt.quizId?.quizTitle || 'Unknown Quiz',
         courseId: attempt.quizId?.courseId,
         score: attempt.scoring?.scorePercentage || 0,
         submittedAt: attempt.submittedAt,
