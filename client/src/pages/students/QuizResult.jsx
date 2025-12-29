@@ -240,10 +240,10 @@ const QuizResult = () => {
                             <div
                               key={optIndex}
                               className={`p-3 rounded-lg border-2 flex items-start gap-2 ${isCorrect
-                                  ? 'border-green-500 bg-green-100'
-                                  : isUserAnswer
-                                    ? 'border-red-500 bg-red-100'
-                                    : 'border-gray-300 bg-white'
+                                ? 'border-green-500 bg-green-100'
+                                : isUserAnswer
+                                  ? 'border-red-500 bg-red-100'
+                                  : 'border-gray-300 bg-white'
                                 }`}
                             >
                               {isCorrect ? (
@@ -293,7 +293,7 @@ const QuizResult = () => {
 
                   {/* Explanation */}
                   {result.explanation && (
-                    <div className="bg-purple-50 p-4 rounded-lg border-l-4 border-purple-500">
+                    <div className="bg-purple-50 p-4 rounded-lg border-l-4 border-purple-500 mb-4">
                       <p className="text-sm font-bold text-purple-800 mb-2 flex items-center gap-2">
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -301,6 +301,19 @@ const QuizResult = () => {
                         Explanation:
                       </p>
                       <p className="text-gray-700 leading-relaxed">{result.explanation}</p>
+                    </div>
+                  )}
+
+                  {/* Educator Feedback */}
+                  {result.feedback && (
+                    <div className="bg-teal-50 p-4 rounded-lg border-l-4 border-teal-500">
+                      <p className="text-sm font-bold text-teal-800 mb-2 flex items-center gap-2">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        Feedback:
+                      </p>
+                      <p className="text-gray-700 leading-relaxed">{result.feedback}</p>
                     </div>
                   )}
 

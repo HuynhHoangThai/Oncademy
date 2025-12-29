@@ -968,7 +968,8 @@ const getQuizAttempt = async (req, res) => {
         points: question.points,
         pointsEarned: userAnswer?.pointsEarned || 0,
         correctAnswerData: quiz.showCorrectAnswers ? correctAnswerData : null,
-        explanation: quiz.showCorrectAnswers ? question.explanation : null
+        explanation: quiz.showCorrectAnswers ? question.explanation : null,
+        feedback: userAnswer?.feedback || null // Educator feedback for the answer
       };
     });
 
