@@ -127,8 +127,14 @@ export const stripeWebhooks = async (request, response) => {
               pathwayData.enrolledStudents.push(userData._id);
               await pathwayData.save();
 
-              userData.enrolledPathways.push(pathwayData._id);
-              await userData.save();
+              // Check if user already has this pathway enrolled to prevent duplicates
+              const userAlreadyEnrolled = userData.enrolledPathways.some(
+                pId => pId.toString() === pathwayData._id.toString()
+              );
+              if (!userAlreadyEnrolled) {
+                userData.enrolledPathways.push(pathwayData._id);
+                await userData.save();
+              }
 
               console.log(`✅ [CHECKOUT] Student ${userData.name} enrolled in pathway ${pathwayData.pathwayTitle}`);
             } else {
@@ -172,8 +178,14 @@ export const stripeWebhooks = async (request, response) => {
               courseData.enrolledStudents.push(userData._id);
               await courseData.save();
 
-              userData.enrolledCourses.push(courseData._id);
-              await userData.save();
+              // Check if user already has this course enrolled to prevent duplicates
+              const userAlreadyEnrolled = userData.enrolledCourses.some(
+                cId => cId.toString() === courseData._id.toString()
+              );
+              if (!userAlreadyEnrolled) {
+                userData.enrolledCourses.push(courseData._id);
+                await userData.save();
+              }
 
               console.log(`✅ [CHECKOUT] Student ${userData.name} enrolled in course ${courseData.courseTitle}`);
             } else {
@@ -239,8 +251,14 @@ export const stripeWebhooks = async (request, response) => {
           pathwayData.enrolledStudents.push(userData._id);
           await pathwayData.save();
 
-          userData.enrolledPathways.push(pathwayData._id);
-          await userData.save();
+          // Check if user already has this pathway enrolled to prevent duplicates
+          const userAlreadyEnrolled = userData.enrolledPathways.some(
+            pId => pId.toString() === pathwayData._id.toString()
+          );
+          if (!userAlreadyEnrolled) {
+            userData.enrolledPathways.push(pathwayData._id);
+            await userData.save();
+          }
 
           console.log(`✅ Student ${userData.name} enrolled in pathway ${pathwayData.pathwayTitle}`);
         } else {
@@ -284,8 +302,14 @@ export const stripeWebhooks = async (request, response) => {
           courseData.enrolledStudents.push(userData._id);
           await courseData.save();
 
-          userData.enrolledCourses.push(courseData._id);
-          await userData.save();
+          // Check if user already has this course enrolled to prevent duplicates
+          const userAlreadyEnrolled = userData.enrolledCourses.some(
+            cId => cId.toString() === courseData._id.toString()
+          );
+          if (!userAlreadyEnrolled) {
+            userData.enrolledCourses.push(courseData._id);
+            await userData.save();
+          }
 
           console.log(`✅ Student ${userData.name} enrolled in course ${courseData.courseTitle}`);
         } else {

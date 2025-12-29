@@ -14,7 +14,7 @@ const MyCourses = () => {
   const [viewMode, setViewMode] = useState('courses') // 'courses' or 'combos'
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
-  const [quizStats, setQuizStats] = useState({ totalAttempts: 0, avgScore: 0, passRate: 0 })
+  const [ setQuizStats] = useState({ totalAttempts: 0, avgScore: 0, passRate: 0 })
   const [studentAttempts, setStudentAttempts] = useState([])
   const [showStudentDetails, setShowStudentDetails] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -1095,13 +1095,13 @@ const MyCourses = () => {
 
                   {/* Course Completion Progress Bar */}
                   <div className="mb-2">
-                    <div className="flex justify-between items-center mb-1">
+                    <div className="flex justify-between items-center mb-2 hidden">
                       <span className="text-xs text-gray-600">Courses Completed</span>
                       <span className="text-xs font-semibold text-gray-700">
                         {student.coursesCompleted}/{student.coursesEnrolled}
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="w-full bg-gray-200 rounded-full h-2 hidden">
                       <div
                         className="h-2 rounded-full transition-all bg-blue-600"
                         style={{

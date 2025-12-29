@@ -64,8 +64,18 @@ export const userEnrolledCourses = async (req, res) => {
             return res.json({ success: false, message: 'User Not Found' })
         }
 
+        // Deduplicate enrolled courses (in case of data inconsistency)
+        const seenIds = new Set();
+        const uniqueCourses = userData.enrolledCourses.filter(c => {
+            if (!c || !c._id) return false;
+            const idStr = c._id.toString();
+            if (seenIds.has(idStr)) return false;
+            seenIds.add(idStr);
+            return true;
+        });
+
         // Get progress data for all enrolled courses
-        const courseIds = userData.enrolledCourses.map(course => course._id)
+        const courseIds = uniqueCourses.map(course => course._id)
         const progressData = await CourseProgress.find({
             userId,
             courseId: { $in: courseIds }
@@ -83,7 +93,7 @@ export const userEnrolledCourses = async (req, res) => {
         })
 
         // Attach progress to each course
-        const coursesWithProgress = userData.enrolledCourses.map(course => ({
+        const coursesWithProgress = uniqueCourses.map(course => ({
             ...course.toObject(),
             progress: progressMap[course._id.toString()] || {
                 progressPercentage: 0,
@@ -389,8 +399,18 @@ export const userEnrolledPathways = async (req, res) => {
             return res.json({ success: false, message: 'User Not Found' });
         }
 
+        // Deduplicate enrolled pathways (in case of data inconsistency)
+        const seenIds = new Set();
+        const uniquePathways = userData.enrolledPathways.filter(p => {
+            if (!p || !p._id) return false;
+            const idStr = p._id.toString();
+            if (seenIds.has(idStr)) return false;
+            seenIds.add(idStr);
+            return true;
+        });
+
         // Get progress for all enrolled pathways
-        const pathwayIds = userData.enrolledPathways.map(p => p._id);
+        const pathwayIds = uniquePathways.map(p => p._id);
         const progressData = await PathwayProgress.find({
             userId,
             pathwayId: { $in: pathwayIds }
@@ -408,7 +428,7 @@ export const userEnrolledPathways = async (req, res) => {
         });
 
         // Attach progress to each pathway
-        const enrolledPathways = userData.enrolledPathways.map(pathway => ({
+        const enrolledPathways = uniquePathways.map(pathway => ({
             ...pathway.toObject(),
             progress: progressMap[pathway._id.toString()] || {
                 progressPercentage: 0,
